@@ -1,0 +1,6 @@
+*.prover binary
+*.verifier binary
+*.bzkir binary
+*.zkir binary
+*.png binary
+*.wasm binary

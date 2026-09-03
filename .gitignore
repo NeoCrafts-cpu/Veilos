@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Vite caches
+**/.vite/
+**/.vite-test/
+
+# Compact keys stay out of git except the browser copies under apps/web/public.
+# Generated contract JS is committed so Vite/Vercel can import circuits.
+packages/contracts/managed/**/keys/
+packages/contracts/managed/**/zkir/
+packages/contracts/managed/**/compiler/
+packages/contracts/managed/spikes/
+
+**/*.prover
+**/*.verifier
+**/*.zkir
+**/*.bzkir
+!apps/web/public/keys/
+!apps/web/public/keys/**
+!apps/web/public/zkir/
+!apps/web/public/zkir/**
+
+# Midnight local / deploy secrets — never commit
+.midnight-state.json
+deployment.json
+deployment.economy.json
+deployment.*.json
+*.seed
+*.mnemonic
+*.wallet-seed
+keystore/
+.private-state/
+leveldb/
+packages/cli/wallet-cache/
+packages/cli/midnight-level-db/
+
+# Environment
+.env
+**/.env
+.env.*
+!.env.example
+!.env.production
+!apps/web/.env.production
+
+# Logs and OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Test / Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Windows NTFS compact.exe noise is not relevant; keep source as-is

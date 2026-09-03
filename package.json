@@ -1,0 +1,39 @@
+{
+  "name": "velios",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Privacy-native operating system for autonomous organizations on Midnight.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "predev": "node scripts/check-node.mjs",
+    "prebuild": "node scripts/check-node.mjs",
+    "pretest": "node scripts/check-node.mjs",
+    "dev": "pnpm --filter @velios/web dev",
+    "build": "pnpm --filter @velios/web build",
+    "test": "pnpm -r --if-present test",
+    "compile:contracts": "pnpm --filter @velios/contracts compile",
+    "compile:economy": "pnpm --filter @velios/contracts compile:economy",
+    "compile:economy-preview": "pnpm --filter @velios/contracts compile:economy-preview",
+    "deploy:preview": "pnpm --filter @velios/cli preview",
+    "deploy:preview:economy": "pnpm --filter @velios/cli preview -- --economy --use-seed",
+    "dust:1am": "pnpm --filter @velios/cli preview -- --dust-only --use-mnemonic",
+    "export:private-state": "pnpm --filter @velios/cli export-private-state",
+    "env:up": "docker compose -f scripts/local-dev/compose.yml up -d --wait",
+    "env:down": "docker compose -f scripts/local-dev/compose.yml down",
+    "lint": "echo \"Typecheck via package tests. Compact: pnpm compile:contracts\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "@midnight-ntwrk/wallet-sdk": "1.2.0"
+    }
+  }
+}
