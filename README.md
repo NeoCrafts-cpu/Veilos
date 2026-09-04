@@ -1,0 +1,154 @@
+# VELIOS
+
+Privacy-native operating system for autonomous organizations on Midnight.
+
+**Humans define the rules. Agents execute them. Midnight proves they were followed.**
+
+> The blockchain sees the proof. Not the secret.
+
+## Why VELIOS
+
+Organizations should not have to choose between blockchain verifiability and business confidentiality. VELIOS lets humans set private authorization policies for AI agents, then uses Midnight Compact circuits to prove an action was allowed without publishing the policy values, credentials, or internal financial state.
+
+## Why Midnight
+
+Midnight is the only execution target for VELIOS. Sensitive inputs stay in private state and witnesses. Compact circuits prove predicates. Only commitments, action identifiers, and authorization outcomes are written to the public ledger.
+
+This repository does not use another chain, EVM contracts, or Solidity as a stand-in.
+
+## Current wave
+
+**Wave 1 — VELIOS CORE** is implemented.
+
+| Built | Notes |
+| --- | --- |
+| Compact authorization contract | `packages/contracts/compact/authorization.compact` |
+| Private policy + commitments | owner / member / agent / role / policy / spend hashes, untrusted witnesses rebound in-circuit |
+| Organization membership | admin-gated `registerMember`; agents require an active member who can open the member commitment |
+| Real credential expiry | private expiry proved against the `kernel` ledger clock via a chain-verified one-day window |
+| Rolling daily limit | the spend commitment binds its window, so the daily cap genuinely resets |
+| MidnightJS 4.1.1 adapters | Official hello-world provider factories |
+| DApp Connector v4 wallet | `window.midnight` enumeration + `connect(networkId)` |
+| Wave 1 UI + Privacy Inspector | neo-brutalist Midnight palette |
+| Contract tests C1–C31 | Compact semantics replica (labeled, not a production ledger) + X5 parity against the real compiled module |
+| Integration tests | Skip as **environment missing** unless local Midnight is up |
+
+A real `SucceedEntirely` authorization still requires Node 22, Docker, Compact compile, and a funded Midnight wallet. The UI never invents AUTHORIZED.
+
+See `docs/wave-progress.md`.
+
+## Wave 1 loop
+
+1. Choose **create my organization** or **explore the public Preview organization**. Preview is read-only public data.
+2. Check readiness (indexer, wallet, DUST, proof server, operator vault). Connect a Midnight wallet (Lace / 1AM) only when you will submit a circuit.
+3. Create an encrypted, contract-scoped operator vault. The wallet pays DUST; the vault opens private commitments. Never enter a wallet recovery phrase.
+4. Deploy your organization and founding member, or unlock/import the backup that opens an existing contract.
+5. Set the private policy and create the agent. `createAgent` commits those witnesses on Midnight.
+6. Authorize a payment request. Compact proves the amount and vendor against the committed policy using the indexer ledger clock. Veilos does not transfer funds.
+7. AUTHORIZED only after `SucceedEntirely` and indexer read-back. A local preview refuse does not call Midnight. A circuit refuse writes nothing and does not print the limit.
+8. Inspect public vs private data in the Privacy Inspector. Activity lists public actions only.
+
+## Architecture
+
+See `ARCHITECTURE.md`.
+
+```text
+PRIVATE INPUTS → PRIVATE STATE → POLICY CONSTRAINTS
+        → ZK PROOF / COMPACT CIRCUIT → PUBLIC RESULT
+```
+
+## Public vs private state
+
+| Private by default | Public when necessary |
+| --- | --- |
+| Policy limits | Organization and agent identifiers |
+| Daily spend values | Agent active/inactive status |
+| Credential contents | Policy commitment (hash), not values |
+| Vendor profile details | Action id, type, authorization result |
+| Authorization witnesses | Proof / transaction reference |
+
+Full rules: `docs/privacy-model.md`.
+
+## Compact contracts
+
+Wave 1 file: `packages/contracts/compact/authorization.compact`
+
+```bash
+pnpm compile:contracts
+# compact compile packages/contracts/compact/authorization.compact packages/contracts/managed/authorization
+```
+
+Language: Compact **0.23**, compiler **0.31.1**. Eight ledger circuits:
+`registerMember`, `setMemberStatus`, `createAgent`, `setAgentPolicy`,
+`setAgentPolicyBySelf`, `setAgentStatus`, `setOrganizationStatus`,
+`authorizeAction` — plus six pure commitment circuits. The compile takes about
+three minutes.
+
+## DID / credentials
+
+Wave 1 keeps a committed credential predicate (`credentialOk` + private expiry)
+on the frozen authorization contract. Wave 2 organization-issued credentials
+are the production path: Compact proves class, expiry, Merkle membership, and
+non-revocation. Official Midnight DID/VC adapters stay experimental until they
+are proven against MidnightJS 4.1.1.
+
+## Agent authorization
+
+Private policy commitment + witness preimage + `assert` predicates. Witnesses are untrusted unless bound to a public commitment. Details: `docs/contract-spec.md`.
+
+## Treasury / governance / procurement
+
+Wave 2 economy contract: `packages/contracts/compact/economy.compact`. Settlement is unshielded NIGHT: amount and recipient are public. Credentials, ballots, and losing bids stay private. Official DID/VC adapters are experimental. See `docs/wave-2-architecture.md`.
+
+## Local development
+
+```bash
+# WSL/Linux/macOS, Node 22+, Docker, Midnight Compact
+pnpm install
+pnpm env:up
+pnpm compile:contracts
+pnpm test
+pnpm dev
+```
+
+Lace / 1AM:
+
+- Local undeployed: **Settings → Midnight → Local (`http://localhost:6300`)**.
+- Preview: set `VELIOS_NETWORK=preview` and `VITE_VELIOS_NETWORK=preview` in a local `.env`, compile contracts, run `pnpm dev`, connect the wallet on Preview, then **Create organization** and sign. Proof server or Proof Station is required. See `scripts/deploy/README.md`.
+
+Do not run Windows `compact.exe`. Setup details: `scripts/local-dev/README.md`.
+
+## Hosting
+
+The operator UI is a static Vite SPA (`pnpm build` → `apps/web/dist`). **Vercel** is the primary host. **Render** can serve the same folder via `render.yaml`. Neither platform compiles Compact, runs the CLI, or proves circuits.
+
+Import the GitHub repo with root directory `/`. Node 22 comes from `.nvmrc`. Do not set wallet seeds, mnemonics, or private-state passwords on the host. `VITE_VELIOS_NETWORK` defaults to `preview`.
+
+Submitting a circuit still needs a local `midnightntwrk/proof-server:8.1.0` on loopback, or the wallet Proof Station. Do not point the UI at a hosted prover — witnesses would leave the operator machine.
+
+Preview contract addresses are public and baked into `@velios/midnight`. Creating an organization from the hosted UI is a real Midnight transaction signed by the connected wallet.
+
+## Testing
+
+```bash
+pnpm test
+```
+
+Matrix: `docs/test-matrix.md`. Integration tests do not mock Midnight; they skip if the undeployed stack is down.
+
+## Security / threat model
+
+- `SECURITY.md`
+- `docs/threat-model.md`
+
+## Wave progress
+
+`docs/wave-progress.md`
+
+## Roadmap
+
+`ROADMAP.md`
+
+## License
+
+Apache License 2.0. See `LICENSE`.
