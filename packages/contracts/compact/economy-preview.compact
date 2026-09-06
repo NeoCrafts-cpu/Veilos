@@ -1,0 +1,281 @@
+// VELIOS Wave 2 Preview core.
+// The full economy.compact facade (12 circuits + HistoricMerkleTree) was
+// submitted to Preview and rejected: "Transaction would exhaust the block limits".
+// This contract is the deployable Preview slice: organization-issued credentials,
+// intent-bound authorization, and unshielded NIGHT settlement.
+// Wave 1 authorization.compact is unchanged and remains the published org contract.
+
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+enum OrganizationStatus { inactive, active }
+enum AuthResult { authorized }
+
+struct AuthReceipt {
+  agentId: Bytes<32>;
+  result: AuthResult;
+  intentCommitment: Bytes<32>;
+  periodStart: Uint<64>;
+  periodEnd: Uint<64>;
+}
+
+struct SettlementPublic {
+  actionId: Bytes<32>;
+  amount: Uint<64>;
+  recipient: Bytes<32>;
+  periodStart: Uint<64>;
+}
+
+export ledger organizationId: Bytes<32>;
+export ledger organizationStatus: OrganizationStatus;
+export ledger adminCommitment: Bytes<32>;
+export ledger credentials: Map<Bytes<32>, Boolean>;
+export ledger revokedNullifiers: Set<Bytes<32>>;
+export ledger credentialCount: Counter;
+export ledger usedActionIds: Set<Bytes<32>>;
+export ledger authorizations: Map<Bytes<32>, AuthReceipt>;
+export ledger actionCount: Counter;
+export ledger settlementNullifiers: Set<Bytes<32>>;
+export ledger settlements: Map<Bytes<32>, SettlementPublic>;
+export ledger settlementCount: Counter;
+
+witness ownerSecret(): Bytes<32>;
+witness holderSecret(): Bytes<32>;
+witness credentialClass(): Uint<64>;
+witness credentialExpiry(): Uint<64>;
+witness credentialSalt(): Bytes<32>;
+witness revocationSecret(): Bytes<32>;
+witness intentSalt(): Bytes<32>;
+witness reasonDigestW(): Bytes<32>;
+witness vendorId(): Bytes<32>;
+witness perActionLimit(): Uint<64>;
+witness dailyLimit(): Uint<64>;
+witness spendPeriodStart(): Uint<64>;
+witness spendDaily(): Uint<64>;
+
+circuit encodeUint64(n: Uint<64>): Bytes<32> {
+  return n as Field as Bytes<32>;
+}
+
+export circuit ownerCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:owner:"),
+    sk
+  ]);
+}
+
+export circuit holderCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:holder:"),
+    sk
+  ]);
+}
+
+export circuit credentialCommitmentOf(
+  holder: Bytes<32>,
+  org: Bytes<32>,
+  classId: Uint<64>,
+  expiry: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<6, Bytes<32>>>([
+    pad(32, "velios:cred:"),
+    holder,
+    org,
+    encodeUint64(classId),
+    encodeUint64(expiry),
+    salt
+  ]);
+}
+
+export circuit revocationNullifierOf(commitment: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:credrev:"),
+    commitment,
+    secret
+  ]);
+}
+
+export circuit intentCommitmentOf(
+  actionId: Bytes<32>,
+  agentId: Bytes<32>,
+  org: Bytes<32>,
+  actionType: Uint<64>,
+  amount: Uint<64>,
+  vendor: Bytes<32>,
+  reason: Bytes<32>,
+  periodStart: Uint<64>,
+  periodEnd: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<11, Bytes<32>>>([
+    pad(32, "velios:intent:"),
+    actionId,
+    agentId,
+    org,
+    encodeUint64(actionType),
+    encodeUint64(amount),
+    vendor,
+    reason,
+    encodeUint64(periodStart),
+    encodeUint64(periodEnd),
+    salt
+  ]);
+}
+
+export circuit settlementNullifierOf(actionId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:settle:"),
+    actionId
+  ]);
+}
+
+export circuit addressCommitmentOf(addr: UserAddress): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:addr:"),
+    addr.bytes
+  ]);
+}
+
+circuit assertWindowIsNow(periodStart: Uint<64>, periodEnd: Uint<64>): [] {
+  assert(periodEnd > periodStart, "invalid period");
+  assert((periodEnd - periodStart) as Uint<64> <= 86400, "period too long");
+  assert(kernel.blockTimeGreaterThan(periodStart), "period not started");
+  assert(!kernel.blockTimeGreaterThan(periodEnd), "period elapsed");
+}
+
+circuit assertAdmin(): [] {
+  assert(adminCommitment == ownerCommitmentOf(ownerSecret()), "unauthorized");
+}
+
+circuit currentCredentialCommitment(): Bytes<32> {
+  return credentialCommitmentOf(
+    holderCommitmentOf(holderSecret()),
+    organizationId,
+    credentialClass(),
+    credentialExpiry(),
+    credentialSalt()
+  );
+}
+
+circuit assertCredential(classId: Uint<64>, periodEnd: Uint<64>): [] {
+  const commitment = currentCredentialCommitment();
+  assert(credentials.member(disclose(commitment)), "credential path");
+  assert(credentialClass() == classId, "credential class");
+  assert(credentialExpiry() >= periodEnd, "credential expired");
+  const nullifier = revocationNullifierOf(commitment, revocationSecret());
+  assert(!revokedNullifiers.member(disclose(nullifier)), "credential revoked");
+}
+
+constructor(orgId: Bytes<32>) {
+  organizationId = disclose(orgId);
+  organizationStatus = OrganizationStatus.active;
+  adminCommitment = disclose(ownerCommitmentOf(ownerSecret()));
+}
+
+export circuit issueCredential(commitment: Bytes<32>): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicCommitment = disclose(commitment);
+  assert(!credentials.member(publicCommitment), "credential exists");
+  credentials.insert(publicCommitment, disclose(true));
+  credentialCount.increment(1);
+}
+
+export circuit revokeCredential(nullifier: Bytes<32>): [] {
+  assertAdmin();
+  const publicNullifier = disclose(nullifier);
+  assert(!revokedNullifiers.member(publicNullifier), "already revoked");
+  revokedNullifiers.insert(publicNullifier);
+}
+
+export circuit authorizePayment(
+  agentId: Bytes<32>,
+  actionId: Bytes<32>,
+  amount: Uint<64>,
+  vendor: Bytes<32>,
+  periodStart: Uint<64>,
+  periodEnd: Uint<64>
+): [] {
+  const publicAgentId = disclose(agentId);
+  const publicActionId = disclose(actionId);
+  const publicPeriodStart = disclose(periodStart);
+  const publicPeriodEnd = disclose(periodEnd);
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  assertWindowIsNow(publicPeriodStart, publicPeriodEnd);
+  assertCredential(1, publicPeriodEnd);
+  assert(vendor == vendorId(), "policy predicate failed");
+  assert(amount <= perActionLimit(), "policy predicate failed");
+  assert(spendPeriodStart() <= publicPeriodStart, "stale period");
+  const carried = spendPeriodStart() == publicPeriodStart ? spendDaily() : 0;
+  const nextSpend = carried + amount;
+  assert(nextSpend <= dailyLimit(), "policy predicate failed");
+  assert(!usedActionIds.member(publicActionId), "replay");
+  usedActionIds.insert(publicActionId);
+  const intentC = intentCommitmentOf(
+    publicActionId,
+    publicAgentId,
+    organizationId,
+    0,
+    amount,
+    vendor,
+    reasonDigestW(),
+    publicPeriodStart,
+    publicPeriodEnd,
+    intentSalt()
+  );
+  authorizations.insert(publicActionId, AuthReceipt {
+    agentId: publicAgentId,
+    result: AuthResult.authorized,
+    intentCommitment: disclose(intentC),
+    periodStart: publicPeriodStart,
+    periodEnd: publicPeriodEnd
+  });
+  actionCount.increment(1);
+}
+
+export circuit depositNight(amount: Uint<128>): [] {
+  assertAdmin();
+  receiveUnshielded(default<Bytes<32>>, disclose(amount));
+}
+
+export circuit settleAuthorizedPayment(
+  actionId: Bytes<32>,
+  amount: Uint<64>,
+  recipient: UserAddress
+): [] {
+  const publicActionId = disclose(actionId);
+  assert(authorizations.member(publicActionId), "authorization missing");
+  const receipt = authorizations.lookup(publicActionId);
+  assert(receipt.result == AuthResult.authorized, "not authorized");
+  const addrC = addressCommitmentOf(recipient);
+  assert(addrC == vendorId(), "recipient mismatch");
+  const intentC = intentCommitmentOf(
+    publicActionId,
+    receipt.agentId,
+    organizationId,
+    0,
+    amount,
+    vendorId(),
+    reasonDigestW(),
+    receipt.periodStart,
+    receipt.periodEnd,
+    intentSalt()
+  );
+  assert(receipt.intentCommitment == intentC, "intent mismatch");
+  const settleN = disclose(settlementNullifierOf(publicActionId));
+  assert(!settlementNullifiers.member(settleN), "already settled");
+  settlementNullifiers.insert(settleN);
+  settlements.insert(publicActionId, SettlementPublic {
+    actionId: publicActionId,
+    amount: disclose(amount),
+    recipient: disclose(addrC),
+    periodStart: receipt.periodStart
+  });
+  settlementCount.increment(1);
+  sendUnshielded(
+    default<Bytes<32>>,
+    disclose(amount) as Uint<128>,
+    right<ContractAddress, UserAddress>(disclose(recipient))
+  );
+}

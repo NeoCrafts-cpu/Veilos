@@ -1,0 +1,27 @@
+{
+  "name": "@velios/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node-artifacts.ts",
+    "./witnesses": "./src/witnesses.ts",
+    "./replica": "./src/replica.ts"
+  },
+  "scripts": {
+    "compile": "bash ./scripts/compile.sh",
+    "compile:economy": "bash ./scripts/compile-economy.sh",
+    "compile:economy-preview": "bash ./scripts/compile-economy-preview.sh",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@velios/policy-engine": "workspace:*",
+    "@velios/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

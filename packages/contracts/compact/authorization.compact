@@ -1,0 +1,426 @@
+// VELIOS Wave 1 authorization contract.
+// Compact language 0.23 — primitives taken from the official Compact
+// reference, ledger ADT docs, and the bulletin-board / hello-world examples.
+// Do not treat witness returns as authority; every predicate value is rebound
+// to a public commitment via persistentHash (bboard publicKey pattern).
+//
+// Verified against the installed compiler (0.31.1) before use:
+//   - `Counter` ledger ADT with `.increment(n)`
+//   - `kernel.blockTimeGreaterThan(Uint<64>)` (lowercase `kernel`; the argument
+//     is seconds since the UNIX epoch, matching ledger `secondsSinceEpoch`)
+// A private value may NOT be passed to `kernel.blockTimeGreaterThan` without
+// `disclose`, because the ledger op would leak a bound on it. Wave 1 therefore
+// binds a *disclosed* authorization window to chain time and compares the
+// private credential expiry against that public window instead.
+
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+enum OrganizationStatus { inactive, active }
+enum MemberStatus { inactive, active }
+enum AgentStatus { inactive, active }
+enum ActionType { payment }
+enum ActionResult { authorized }
+
+struct MemberPublic {
+  organizationId: Bytes<32>;
+  status: MemberStatus;
+  memberCommitment: Bytes<32>;
+}
+
+struct AgentPublic {
+  organizationId: Bytes<32>;
+  status: AgentStatus;
+  memberId: Bytes<32>;
+  ownerCommitment: Bytes<32>;
+  agentCommitment: Bytes<32>;
+  roleCommitment: Bytes<32>;
+  policyCommitment: Bytes<32>;
+  spendCommitment: Bytes<32>;
+}
+
+struct ActionPublic {
+  agentId: Bytes<32>;
+  actionType: ActionType;
+  result: ActionResult;
+  resultCommitment: Bytes<32>;
+  // Public authorization window this action was proved inside. This is the
+  // "TIMESTAMP" of the public result: it is chain-time bound by the circuit,
+  // not a client-supplied label.
+  periodStart: Uint<64>;
+  periodEnd: Uint<64>;
+}
+
+export ledger organizationId: Bytes<32>;
+export ledger organizationStatus: OrganizationStatus;
+export ledger adminCommitment: Bytes<32>;
+export ledger members: Map<Bytes<32>, MemberPublic>;
+export ledger agents: Map<Bytes<32>, AgentPublic>;
+export ledger usedActionIds: Set<Bytes<32>>;
+export ledger actions: Map<Bytes<32>, ActionPublic>;
+// Public, independently verifiable counts for the organization screen.
+export ledger memberCount: Counter;
+export ledger agentCount: Counter;
+export ledger actionCount: Counter;
+
+witness ownerSecret(): Bytes<32>;
+witness memberSecret(): Bytes<32>;
+witness agentSecret(): Bytes<32>;
+witness agentRole(): Bytes<32>;
+witness roleSalt(): Bytes<32>;
+witness policyPerActionLimit(): Uint<64>;
+witness policyDailyLimit(): Uint<64>;
+witness policyVendorId(): Bytes<32>;
+witness policyCredentialOk(): Boolean;
+witness policyCredentialExpiry(): Uint<64>;
+witness policySelfModifyAllowed(): Boolean;
+witness policySalt(): Bytes<32>;
+witness spendPeriodStart(): Uint<64>;
+witness spendDaily(): Uint<64>;
+witness spendSalt(): Bytes<32>;
+witness nextSpendSalt(): Bytes<32>;
+
+// Field→Bytes encoding matches the official bboard
+// `sequence as Field as Bytes<32>` pattern.
+circuit encodeUint64(n: Uint<64>): Bytes<32> {
+  return n as Field as Bytes<32>;
+}
+
+circuit encodeBoolean(b: Boolean): Bytes<32> {
+  return (b ? 1 : 0) as Field as Bytes<32>;
+}
+
+export circuit ownerCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:owner:"),
+    sk
+  ]);
+}
+
+export circuit memberCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:member:"),
+    sk
+  ]);
+}
+
+export circuit agentCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:agentkey:"),
+    sk
+  ]);
+}
+
+export circuit roleCommitmentOf(role: Bytes<32>, salt: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:role:"),
+    role,
+    salt
+  ]);
+}
+
+export circuit policyCommitmentOf(
+  perActionLimit: Uint<64>,
+  dailyLimit: Uint<64>,
+  vendorId: Bytes<32>,
+  credentialOk: Boolean,
+  credentialExpiry: Uint<64>,
+  selfModifyAllowed: Boolean,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<8, Bytes<32>>>([
+    pad(32, "velios:policy:"),
+    encodeUint64(perActionLimit),
+    encodeUint64(dailyLimit),
+    vendorId,
+    encodeBoolean(credentialOk),
+    encodeUint64(credentialExpiry),
+    encodeBoolean(selfModifyAllowed),
+    salt
+  ]);
+}
+
+export circuit spendCommitmentOf(
+  periodStart: Uint<64>,
+  dailySpend: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "velios:spend:"),
+    encodeUint64(periodStart),
+    encodeUint64(dailySpend),
+    salt
+  ]);
+}
+
+circuit currentPolicyCommitment(): Bytes<32> {
+  return policyCommitmentOf(
+    policyPerActionLimit(),
+    policyDailyLimit(),
+    policyVendorId(),
+    policyCredentialOk(),
+    policyCredentialExpiry(),
+    policySelfModifyAllowed(),
+    policySalt()
+  );
+}
+
+circuit currentSpendCommitment(): Bytes<32> {
+  return spendCommitmentOf(spendPeriodStart(), spendDaily(), spendSalt());
+}
+
+circuit currentRoleCommitment(): Bytes<32> {
+  return roleCommitmentOf(agentRole(), roleSalt());
+}
+
+// Binds a disclosed authorization window to real chain time. Nothing private
+// is passed to the ledger clock, so no private value is bounded by this op.
+circuit assertWindowIsNow(periodStart: Uint<64>, periodEnd: Uint<64>): [] {
+  assert(periodEnd > periodStart, "invalid period");
+  // 86400s bounds the window. Without this a caller could declare a multi-year
+  // "day" and never roll the spend bucket over.
+  assert((periodEnd - periodStart) as Uint<64> <= 86400, "period too long");
+  assert(kernel.blockTimeGreaterThan(periodStart), "period not started");
+  assert(!kernel.blockTimeGreaterThan(periodEnd), "period elapsed");
+}
+
+constructor(orgId: Bytes<32>) {
+  organizationId = disclose(orgId);
+  organizationStatus = OrganizationStatus.active;
+  adminCommitment = disclose(ownerCommitmentOf(ownerSecret()));
+}
+
+export circuit setOrganizationStatus(status: OrganizationStatus): [] {
+  const adminC = ownerCommitmentOf(ownerSecret());
+  assert(adminCommitment == adminC, "unauthorized");
+  organizationStatus = disclose(status);
+}
+
+// --- Membership -------------------------------------------------------------
+// Wave 1 "identity / basic membership": the organization admin admits a member
+// whose identity secret stays private. Only the commitment is public.
+
+export circuit registerMember(memberId: Bytes<32>): [] {
+  const publicMemberId = disclose(memberId);
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const adminC = ownerCommitmentOf(ownerSecret());
+  assert(adminCommitment == adminC, "unauthorized");
+  assert(!members.member(publicMemberId), "member exists");
+  const memberC = memberCommitmentOf(memberSecret());
+  members.insert(publicMemberId, MemberPublic {
+    organizationId: organizationId,
+    status: MemberStatus.active,
+    memberCommitment: disclose(memberC)
+  });
+  memberCount.increment(1);
+}
+
+export circuit setMemberStatus(memberId: Bytes<32>, status: MemberStatus): [] {
+  const publicMemberId = disclose(memberId);
+  const adminC = ownerCommitmentOf(ownerSecret());
+  assert(adminCommitment == adminC, "unauthorized");
+  assert(members.member(publicMemberId), "member missing");
+  const existing = members.lookup(publicMemberId);
+  members.insert(publicMemberId, MemberPublic {
+    organizationId: existing.organizationId,
+    status: disclose(status),
+    memberCommitment: existing.memberCommitment
+  });
+}
+
+// --- Agents -----------------------------------------------------------------
+
+export circuit createAgent(agentId: Bytes<32>, memberId: Bytes<32>): [] {
+  const publicAgentId = disclose(agentId);
+  const publicMemberId = disclose(memberId);
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  assert(!agents.member(publicAgentId), "agent exists");
+
+  // An agent may only be created by an active member who can open that
+  // member's commitment. Membership is the Wave 1 identity gate.
+  assert(members.member(publicMemberId), "member missing");
+  const member = members.lookup(publicMemberId);
+  assert(member.status == MemberStatus.active, "member inactive");
+  const memberC = memberCommitmentOf(memberSecret());
+  assert(member.memberCommitment == memberC, "unauthorized");
+
+  const ownerC = ownerCommitmentOf(ownerSecret());
+  const agentC = agentCommitmentOf(agentSecret());
+  const roleC = currentRoleCommitment();
+  const policyC = currentPolicyCommitment();
+  const spendC = currentSpendCommitment();
+  agents.insert(publicAgentId, AgentPublic {
+    organizationId: organizationId,
+    status: AgentStatus.active,
+    memberId: publicMemberId,
+    ownerCommitment: disclose(ownerC),
+    agentCommitment: disclose(agentC),
+    roleCommitment: disclose(roleC),
+    policyCommitment: disclose(policyC),
+    spendCommitment: disclose(spendC)
+  });
+  agentCount.increment(1);
+}
+
+export circuit setAgentPolicy(agentId: Bytes<32>): [] {
+  const publicAgentId = disclose(agentId);
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  assert(agents.member(publicAgentId), "agent missing");
+  const agent = agents.lookup(publicAgentId);
+  assert(agent.status == AgentStatus.active, "agent inactive");
+  const ownerC = ownerCommitmentOf(ownerSecret());
+  assert(agent.ownerCommitment == ownerC, "unauthorized");
+  const policyC = currentPolicyCommitment();
+  const roleC = currentRoleCommitment();
+  agents.insert(publicAgentId, AgentPublic {
+    organizationId: agent.organizationId,
+    status: agent.status,
+    memberId: agent.memberId,
+    ownerCommitment: agent.ownerCommitment,
+    agentCommitment: agent.agentCommitment,
+    roleCommitment: disclose(roleC),
+    policyCommitment: disclose(policyC),
+    spendCommitment: agent.spendCommitment
+  });
+}
+
+// Wave 1 product note: this circuit is role-only. It may rewrite
+// `roleCommitment` after opening the committed policy and proving
+// `selfModifyAllowed`. It does NOT rotate policy, spend, or owner
+// commitments. Wave 2 policy changes are owner- or governance-gated.
+export circuit setAgentPolicyBySelf(agentId: Bytes<32>): [] {
+  const publicAgentId = disclose(agentId);
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  assert(agents.member(publicAgentId), "agent missing");
+  const agent = agents.lookup(publicAgentId);
+  assert(agent.status == AgentStatus.active, "agent inactive");
+  const agentC = agentCommitmentOf(agentSecret());
+  assert(agent.agentCommitment == agentC, "unauthorized");
+
+  // The committed policy must open, and it must permit self modification.
+  const committedPolicyC = currentPolicyCommitment();
+  assert(agent.policyCommitment == committedPolicyC, "policy predicate failed");
+  assert(policySelfModifyAllowed(), "self modify denied");
+
+  const roleC = currentRoleCommitment();
+  agents.insert(publicAgentId, AgentPublic {
+    organizationId: agent.organizationId,
+    status: agent.status,
+    memberId: agent.memberId,
+    ownerCommitment: agent.ownerCommitment,
+    agentCommitment: agent.agentCommitment,
+    roleCommitment: disclose(roleC),
+    policyCommitment: agent.policyCommitment,
+    spendCommitment: agent.spendCommitment
+  });
+}
+
+export circuit setAgentStatus(agentId: Bytes<32>, status: AgentStatus): [] {
+  const publicAgentId = disclose(agentId);
+  assert(agents.member(publicAgentId), "agent missing");
+  const agent = agents.lookup(publicAgentId);
+  const ownerC = ownerCommitmentOf(ownerSecret());
+  assert(agent.ownerCommitment == ownerC, "unauthorized");
+  agents.insert(publicAgentId, AgentPublic {
+    organizationId: agent.organizationId,
+    status: disclose(status),
+    memberId: agent.memberId,
+    ownerCommitment: agent.ownerCommitment,
+    agentCommitment: agent.agentCommitment,
+    roleCommitment: agent.roleCommitment,
+    policyCommitment: agent.policyCommitment,
+    spendCommitment: agent.spendCommitment
+  });
+}
+
+// --- Authorization ----------------------------------------------------------
+
+export circuit authorizeAction(
+  agentId: Bytes<32>,
+  actionId: Bytes<32>,
+  actionType: ActionType,
+  amount: Uint<64>,
+  vendorId: Bytes<32>,
+  claimedOrganizationId: Bytes<32>,
+  periodStart: Uint<64>,
+  periodEnd: Uint<64>
+): [] {
+  const publicAgentId = disclose(agentId);
+  const publicActionId = disclose(actionId);
+  const publicPeriodStart = disclose(periodStart);
+  const publicPeriodEnd = disclose(periodEnd);
+
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  assert(claimedOrganizationId == organizationId, "wrong organization");
+  assert(agents.member(publicAgentId), "agent missing");
+  const agent = agents.lookup(publicAgentId);
+  assert(agent.organizationId == organizationId, "wrong organization");
+  assert(agent.status == AgentStatus.active, "agent inactive");
+
+  // The agent's member must still be active: revoking a member disables every
+  // agent that member created.
+  assert(members.member(agent.memberId), "member missing");
+  const member = members.lookup(agent.memberId);
+  assert(member.status == MemberStatus.active, "member inactive");
+
+  // Anchor the disclosed window in real chain time before anything depends on it.
+  assertWindowIsNow(publicPeriodStart, publicPeriodEnd);
+
+  const ownerC = ownerCommitmentOf(ownerSecret());
+  assert(agent.ownerCommitment == ownerC, "unauthorized");
+
+  const policyC = currentPolicyCommitment();
+  assert(agent.policyCommitment == policyC, "policy predicate failed");
+
+  const spendC = currentSpendCommitment();
+  assert(agent.spendCommitment == spendC, "policy predicate failed");
+
+  assert(policyCredentialOk(), "credential predicate failed");
+  // Real expiry check. The private expiry is never disclosed and never passed
+  // to the ledger clock; it is compared against the public window end, which
+  // the circuit already proved contains the current block time.
+  assert(policyCredentialExpiry() >= publicPeriodEnd, "credential expired");
+  assert(vendorId == policyVendorId(), "policy predicate failed");
+  assert(amount <= policyPerActionLimit(), "policy predicate failed");
+
+  // Rolling window: a spend bucket committed for an earlier window resets to
+  // zero, so the daily limit is genuinely per-window rather than per-lifetime.
+  // A bucket from a *later* window would let a caller replay an old balance.
+  assert(spendPeriodStart() <= publicPeriodStart, "stale period");
+  const carried = spendPeriodStart() == publicPeriodStart ? spendDaily() : 0;
+  const dailyLimit = policyDailyLimit();
+  const nextSpend = carried + amount;
+  assert(nextSpend >= carried, "policy predicate failed");
+  assert(nextSpend <= dailyLimit, "policy predicate failed");
+  const nextSpend64 = nextSpend as Uint<64>;
+
+  assert(!usedActionIds.member(publicActionId), "replay");
+  usedActionIds.insert(publicActionId);
+
+  const resultC = persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:result:"),
+    publicActionId,
+    publicAgentId
+  ]);
+  actions.insert(publicActionId, ActionPublic {
+    agentId: publicAgentId,
+    actionType: disclose(actionType),
+    result: ActionResult.authorized,
+    resultCommitment: disclose(resultC),
+    periodStart: publicPeriodStart,
+    periodEnd: publicPeriodEnd
+  });
+  actionCount.increment(1);
+
+  const newSpendC = spendCommitmentOf(publicPeriodStart, nextSpend64, nextSpendSalt());
+  agents.insert(publicAgentId, AgentPublic {
+    organizationId: agent.organizationId,
+    status: agent.status,
+    memberId: agent.memberId,
+    ownerCommitment: agent.ownerCommitment,
+    agentCommitment: agent.agentCommitment,
+    roleCommitment: agent.roleCommitment,
+    policyCommitment: agent.policyCommitment,
+    spendCommitment: disclose(newSpendC)
+  });
+}

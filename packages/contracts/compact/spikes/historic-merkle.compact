@@ -1,0 +1,16 @@
+// Disposable Wave 2 API spike. Official HistoricMerkleTree membership.
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+export ledger items: HistoricMerkleTree<10, Bytes<32>>;
+
+witness findItem(item: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+export circuit insert(item: Bytes<32>): [] {
+  items.insert(disclose(item));
+}
+
+export circuit check(item: Bytes<32>): [] {
+  const path = findItem(item);
+  assert(items.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "path must valid");
+}
