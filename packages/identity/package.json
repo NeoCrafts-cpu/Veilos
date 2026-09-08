@@ -1,0 +1,21 @@
+{
+  "name": "@velios/identity",
+  "version": "0.2.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@velios/credentials": "workspace:*",
+    "@velios/policy-engine": "workspace:*",
+    "@velios/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
