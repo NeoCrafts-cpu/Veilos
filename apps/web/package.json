@@ -1,0 +1,45 @@
+{
+  "name": "@velios/web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bash ../../scripts/copy-zk-artifacts.sh && vite",
+    "build": "bash ../../scripts/copy-zk-artifacts.sh && tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/dapp-connector-api": "4.0.0",
+    "@midnight-ntwrk/ledger-v8": "8.1.0",
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
+    "@velios/economy": "workspace:*",
+    "@velios/midnight": "workspace:*",
+    "@velios/policy-engine": "workspace:*",
+    "@velios/shared-types": "workspace:*",
+    "buffer": "^6.0.3",
+    "cross-fetch": "^4.1.0",
+    "@subsquid/scale-codec": "4.0.1",
+    "@subsquid/util-internal-hex": "1.2.3",
+    "@subsquid/util-internal-json": "1.2.4",
+    "fetch-retry": "^6.0.0",
+    "object-inspect": "^1.13.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.8.2"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6",
+    "vite-plugin-wasm": "^3.6.0",
+    "vitest": "^3.2.4"
+  }
+}
