@@ -1,29 +1,31 @@
 # 90-second demo / video pitch
 
-Record this in one take. Upload to YouTube as **public**. Paste the URL on AKINDO.
+Record in one take. Upload to **public YouTube**. Paste the URL on AKINDO.
 
-**On screen:** https://veilos-web.vercel.app then `/app/preview` and `/app/privacy`.
+Speak to a **non-technical** judge for the first 30 seconds. Then show the UI.
 
----
-
-**0:00–0:12 — Problem**  
-Autonomous orgs want agents that can spend and settle. Public chains leak the policy. Off-chain rules cannot be verified.
-
-**0:12–0:25 — Veilos**  
-Veilos is a privacy-native OS for autonomous organizations on Midnight. Humans set the rules. Agents execute. Midnight proves they were followed. The chain sees the proof, not the secret.
-
-**0:25–0:45 — Dual ledger**  
-Show the Privacy Inspector. Policy limits, credentials, ballots, and losing bids stay private. Organization ids, authorization receipts, and unshielded NIGHT amount/recipient are public. AUTHORIZED is never a local guess — only `SucceedEntirely` plus the indexer row.
-
-**0:45–1:05 — Product loop**  
-Click through: Get Started → Preview organization → agent/policy → authorize → credentials → treasury. Name the Preview contracts if you have time.
-
-**1:05–1:20 — Why Midnight**  
-Compact circuits, private state, official MidnightJS 4.1.1. No Solidity stand-in. Proofs stay on a local proof-server or the wallet Proof Station.
-
-**1:20–1:30 — Close**  
-Repo github.com/NeoCrafts-cpu/Veilos. Topic midnightntwrk. Apache 2.0. Compact compiles. That is Wave 1.
+**On screen:** https://veilos-web.vercel.app → `/app/preview` → `/app/privacy` → credentials/treasury if time.
 
 ---
 
-Keep the camera on the UI. Do not paste seeds or open the operator vault passphrase on video.
+**0:00–0:15 — Problem anyone can repeat**  
+Companies are letting AI agents pay vendors. If you put the budget on a public blockchain, everyone sees the budget. If you keep it in a spreadsheet, nobody can prove the agent obeyed it.
+
+**0:15–0:30 — Veilos**  
+Veilos is a privacy-native OS for those organizations, on Midnight. Humans write the rules. Agents request actions. Midnight proves the action was allowed. The chain sees the proof — not the secret.
+
+**0:30–0:50 — Dual ledger (teach Midnight)**  
+Privacy Inspector: left side is private (limits, credentials, ballots). Right side is public (ids, receipts). When we settle NIGHT, amount and recipient are public on purpose. AUTHORIZED is never a green check we invented — only a real Compact success plus the indexer row.
+
+**0:50–1:10 — Click the product**  
+Get Started vs Explore Preview. Preview org (no wallet). Mention vault, agent policy, authorize, treasury.
+
+**1:10–1:25 — Why this network**  
+Compact, private state, official MidnightJS. No Solidity copy. Proofs stay on the operator machine.
+
+**1:25–1:30 — Close**  
+github.com/NeoCrafts-cpu/Veilos. Topic midnightntwrk. Apache 2.0.
+
+---
+
+Do not show seeds or vault passphrases. If a wallet popup appears, cancel and stay on Preview.

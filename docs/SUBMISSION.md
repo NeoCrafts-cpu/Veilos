@@ -7,7 +7,10 @@
 **License:** Apache 2.0 (`LICENSE`, `NOTICE`)  
 **Live UI:** https://veilos-web.vercel.app  
 **Pitch deck:** [docs/pitch/index.html](pitch/index.html)  
-**Demo script:** [DEMO-SCRIPT.md](DEMO-SCRIPT.md)
+**Demo script:** [DEMO-SCRIPT.md](DEMO-SCRIPT.md)  
+**Rubric map:** [RUBRIC.md](RUBRIC.md)  
+**Business / GTM:** [BUSINESS.md](BUSINESS.md)  
+**Community posts (publish):** [COMMUNITY.md](COMMUNITY.md)
 
 ## Progress completed this Wave
 

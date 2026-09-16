@@ -52,17 +52,17 @@ const NEXT_MODULES = [
   {
     title: "Identity & credentials",
     body: "Prove a fact about a member or agent without dumping the credential.",
-    wave: "Wave 2",
+    wave: "In build",
   },
   {
     title: "Governance",
     body: "Private eligibility and ballot commitments. Only the finalized aggregate is public. Trustless tally completeness is experimental.",
-    wave: "Wave 2",
+    wave: "In build",
   },
   {
     title: "Procurement",
     body: "Private bids, public validity. Suppliers stay masked until disclosure.",
-    wave: "Wave 2",
+    wave: "In build",
   },
   {
     title: "Credit & reputation",
@@ -77,7 +77,7 @@ const NEXT_MODULES = [
   {
     title: "Selective disclosure",
     body: "Auditors see what they are entitled to. Everyone else sees a proof.",
-    wave: "Wave 2",
+    wave: "In build",
   },
 ] as const;
 
@@ -179,8 +179,9 @@ export function LandingPage() {
               <span className="hero-line mark">Autonomous.</span>
             </h1>
             <p className="lede">
-              Authorize agent actions without revealing private policy values. Veilos records a verified
-              result on Midnight. It does not transfer funds or hold a treasury balance.
+              If an agent can spend, someone must prove it was allowed — without publishing the budget.
+              Veilos commits private policy on Midnight, then records a verified result. Unshielded NIGHT
+              settlement is optional and public by design.
             </p>
             <div className="hero-cta">
               <Link className="btn" to="/app/setup" onClick={() => startOwnerSetup()}>
@@ -206,8 +207,9 @@ export function LandingPage() {
             <p className="section-index">01 / Product</p>
             <h2 className="display">Live modules</h2>
             <p className="section-copy">
-              Wave 1 is the authorization kernel. These modules are in the product now. Later waves stay
-              labeled until the Compact path is proven on a real Midnight environment.
+              This buildathon Wave ships the authorization kernel and the economy modules (credentials,
+              treasury, governance, procurement, auditor). Wave 3 stays labeled until Preview authorize
+              and settle evidence is retained.
             </p>
           </Reveal>
           <div className="module-grid">
@@ -299,8 +301,11 @@ export function LandingPage() {
           </div>
 
           <details className="landing-roadmap">
-            <summary>Roadmap modules after Wave 1</summary>
-            <p className="section-copy">Shown as product map, not shipped Wave 1 features.</p>
+            <summary>Economy modules in this build · Wave 3 later</summary>
+            <p className="section-copy">
+              Credentials, governance, procurement, and disclosure are in the operator UI. Credit and
+              marketplace wait for Wave 3.
+            </p>
             <div className="module-grid">
               {NEXT_MODULES.map((module) => (
                 <article key={module.title} className="card module-card">

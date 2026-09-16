@@ -13,7 +13,7 @@
 | 6 | Wave 1 UI | **Done** — owner vs public Preview journeys; guided setup/policy/authorization; public fields from indexer; circuit calls via MidnightJS |
 | 7 | Privacy Inspector | **Done** |
 | 8 | Security + QA | **Updated** — exact indexer finality, encrypted journal, encrypted browser private state, Node 22 CI |
-| 9 | Demo + README + submission | **Deck + judge README in-repo** (`docs/pitch/index.html`). **YouTube video still required** on AKINDO — use `docs/DEMO-SCRIPT.md`. |
+| 9 | Demo + README + submission | **Deck, rubric map, business, community copy in-repo.** **YouTube + X posts still required** — `docs/DEMO-SCRIPT.md`, `docs/COMMUNITY.md`. |
 
 ## Wave 2 — VELIOS ECONOMY
 

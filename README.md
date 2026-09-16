@@ -20,6 +20,9 @@ This is the **first** AKINDO submission (not a resubmit). Topic on GitHub: **`mi
 | Slide deck | [docs/pitch/index.html](docs/pitch/index.html) (open in a browser; Print → PDF) |
 | Demo / video pitch | record from [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md) and paste the public YouTube URL on AKINDO |
 | Wave progress | [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/wave-progress.md](docs/wave-progress.md) |
+| Judging rubric map | [docs/RUBRIC.md](docs/RUBRIC.md) |
+| Market / GTM | [docs/BUSINESS.md](docs/BUSINESS.md) |
+| Community posts to publish | [docs/COMMUNITY.md](docs/COMMUNITY.md) |
 | Live UI | https://veilos-web.vercel.app |
 | Preview contracts | authorization `0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02` · economy-preview `0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f` |
 
@@ -50,7 +53,9 @@ Lace / 1AM: Preview network. Proof server `http://127.0.0.1:6300` or wallet Proo
 
 ## Why Veilos
 
-Organizations should not have to choose between blockchain verifiability and business confidentiality. VELIOS lets humans set private authorization policies for AI agents, then uses Midnight Compact circuits to prove an action was allowed without publishing the policy values, credentials, or internal financial state.
+If an organization lets an AI agent pay vendors or move treasury, someone must prove the agent stayed inside policy. Publishing that policy on a transparent chain leaks the operating model. Keeping it in a spreadsheet cannot be independently verified.
+
+Veilos is the third path: humans set private rules; Midnight Compact proves a requested action fits those rules; the ledger records the proof and the necessary public result — not the secret.
 
 ## Why Midnight
 
