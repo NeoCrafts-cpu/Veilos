@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Veilos — Midnight Buildathon Wave 1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --black: #080808;
+        --white: #f5f5f0;
+        --blue: #0000ff;
+        --lime: #b9ff00;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--black); color: var(--white); font-family: "IBM Plex Sans", sans-serif; }
+      .deck { min-height: 100vh; }
+      section {
+        min-height: 100vh;
+        padding: 48px 56px;
+        border-bottom: 3px solid var(--white);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 20px;
+      }
+      h1, h2 { font-family: "Big Shoulders Display", sans-serif; text-transform: uppercase; margin: 0; line-height: 0.92; }
+      h1 { font-size: clamp(56px, 10vw, 120px); }
+      h2 { font-size: clamp(36px, 6vw, 72px); }
+      p, li { font-size: 22px; line-height: 1.4; max-width: 920px; }
+      ul { margin: 0; padding-left: 1.2em; }
+      .kicker { font-family: "IBM Plex Mono", monospace; color: var(--lime); letter-spacing: 0.08em; text-transform: uppercase; font-size: 14px; }
+      .bar { display: inline-block; background: var(--blue); color: var(--white); border: 3px solid var(--white); box-shadow: 6px 6px 0 var(--white); padding: 8px 14px; font-weight: 700; }
+      .lime { color: var(--lime); }
+      a { color: var(--lime); }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      code { font-family: "IBM Plex Mono", monospace; font-size: 16px; word-break: break-all; }
+      nav {
+        position: fixed; bottom: 16px; right: 16px; z-index: 2;
+        font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--white);
+      }
+      @media print {
+        section { break-after: page; min-height: 100vh; }
+        nav { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>Veilos · Wave 1 · ← →</nav>
+    <div class="deck">
+      <section>
+        <p class="kicker">Midnight Buildathon · Wave 1</p>
+        <h1>Veilos</h1>
+        <p>Privacy-native OS for autonomous organizations on Midnight.</p>
+        <p class="bar">Humans define the rules. Agents execute them. Midnight proves they were followed.</p>
+      </section>
+
+      <section>
+        <p class="kicker">Problem</p>
+        <h2>Agents need rules.<br />Public chains leak them.</h2>
+        <ul>
+          <li>Spend limits, vendor lists, and credentials on a transparent ledger expose the operating model.</li>
+          <li>Off-chain policy cannot be independently verified.</li>
+          <li>Orgs should not choose between confidentiality and verifiability.</li>
+        </ul>
+      </section>
+
+      <section>
+        <p class="kicker">Solution</p>
+        <h2>Private inputs.<br />Verified actions.<br />Public results.</h2>
+        <p>Veilos commits private agent policy on Midnight Compact. Witnesses stay off the public ledger. AUTHORIZED is only <code>SucceedEntirely</code> plus the exact indexer action.</p>
+        <p class="lime">The blockchain sees the proof. Not the secret.</p>
+      </section>
+
+      <section>
+        <p class="kicker">Why Midnight</p>
+        <h2>Dual ledger. Not a Solidity stand-in.</h2>
+        <ul>
+          <li>Compact 0.23 / compiler 0.31.1</li>
+          <li>MidnightJS 4.1.1 · DApp Connector v4 · proof-server 8.1.0</li>
+          <li>Official Preview indexer and RPC</li>
+          <li>Private state encrypted (PBKDF2 + AES-GCM)</li>
+          <li>Proofs stay local — no hosted prover</li>
+        </ul>
+      </section>
+
+      <section>
+        <p class="kicker">Product</p>
+        <h2>One operator loop</h2>
+        <div class="grid">
+          <ul>
+            <li>Encrypted operator vault</li>
+            <li>Organization + founding member</li>
+            <li>Private agent policy</li>
+            <li>Authorize payment</li>
+            <li>Privacy Inspector</li>
+          </ul>
+          <ul>
+            <li>Org-issued credentials</li>
+            <li>Unshielded NIGHT treasury</li>
+            <li>Private ballots</li>
+            <li>Sealed procurement</li>
+            <li>Scoped auditor views</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <p class="kicker">Technical gate</p>
+        <h2>Compact compiles.</h2>
+        <p><code>packages/contracts/compact/authorization.compact</code></p>
+        <p><code>packages/contracts/compact/economy.compact</code></p>
+        <p><code>packages/contracts/compact/economy-preview.compact</code></p>
+        <p>Compile: <code>pnpm compile:contracts</code> · Tests: <code>pnpm test</code></p>
+      </section>
+
+      <section>
+        <p class="kicker">Live Preview</p>
+        <h2>On Midnight today</h2>
+        <p>Authorization<br /><code>0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02</code></p>
+        <p>Economy-preview<br /><code>0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f</code></p>
+        <p>Deploy tx <code>00a858c27854e88af1c7d9b0d8556c6ce2c30b6dfc237aa79dce45981fcc8d1e2b</code></p>
+      </section>
+
+      <section>
+        <p class="kicker">Audience</p>
+        <h2>Who adopts Veilos</h2>
+        <ul>
+          <li>Autonomous orgs that run agents against a budget</li>
+          <li>Operators who cannot publish vendor lists or daily caps</li>
+          <li>Auditors who need a receipt, not the full private book</li>
+        </ul>
+        <p>Path: Preview demo → own Compact deploy → production org vaults. Wave 3 waits for retained Preview authorize + settle evidence.</p>
+      </section>
+
+      <section>
+        <p class="kicker">Judges</p>
+        <h2>Evaluate in 15 minutes</h2>
+        <ul>
+          <li>Public repo · topic <code>midnightntwrk</code> · Apache 2.0</li>
+          <li>README → How judges evaluate</li>
+          <li>UI: <a href="https://veilos-web.vercel.app">veilos-web.vercel.app</a></li>
+          <li>This deck: <code>docs/pitch/index.html</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <p class="kicker">Close</p>
+        <h1>Veilos</h1>
+        <p class="bar">PRIVATE. VERIFIABLE. AUTONOMOUS.</p>
+        <p><a href="https://github.com/NeoCrafts-cpu/Veilos">github.com/NeoCrafts-cpu/Veilos</a></p>
+      </section>
+    </div>
+    <script>
+      const slides = [...document.querySelectorAll("section")];
+      const go = (d) => {
+        const y = window.scrollY + innerHeight / 3;
+        const i = slides.findIndex((s) => s.offsetTop + s.offsetHeight > y);
+        const next = slides[Math.max(0, Math.min(slides.length - 1, i + d))];
+        next?.scrollIntoView({ behavior: "smooth" });
+      };
+      addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); go(1); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+      });
+    </script>
+  </body>
+</html>

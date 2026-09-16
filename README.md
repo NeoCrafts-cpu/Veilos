@@ -1,4 +1,4 @@
-# VELIOS
+# Veilos
 
 Privacy-native operating system for autonomous organizations on Midnight.
 
@@ -6,7 +6,49 @@ Privacy-native operating system for autonomous organizations on Midnight.
 
 > The blockchain sees the proof. Not the secret.
 
-## Why VELIOS
+## Midnight Buildathon — Wave 1 (judges)
+
+This is the **first** AKINDO submission (not a resubmit). Topic on GitHub: **`midnightntwrk`**. License: **Apache 2.0** (`LICENSE`, `NOTICE`). Midnight-related code is original Compact + official `@midnight-ntwrk/*` adapters — not a fork of another DApp.
+
+| Required | Where |
+| --- | --- |
+| Public repo | https://github.com/NeoCrafts-cpu/Veilos |
+| Compact (technical gate) | `packages/contracts/compact/authorization.compact` (also `economy.compact`, `economy-preview.compact`) |
+| Compile | `pnpm compile:contracts` — Compact language 0.23, compiler 0.31.1 |
+| README / architecture / Midnight | this file, `ARCHITECTURE.md`, `MIDNIGHT.md`, `docs/dependency-report.md` |
+| How to test | section below |
+| Slide deck | [docs/pitch/index.html](docs/pitch/index.html) (open in a browser; Print → PDF) |
+| Demo / video pitch | record from [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md) and paste the public YouTube URL on AKINDO |
+| Wave progress | [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/wave-progress.md](docs/wave-progress.md) |
+| Live UI | https://veilos-web.vercel.app |
+| Preview contracts | authorization `0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02` · economy-preview `0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f` |
+
+Ecosystem attribution: MidnightJS 4.1.1 and Docker pins follow [`midnightntwrk/example-hello-world`](https://github.com/midnightntwrk/example-hello-world) (Apache 2.0). See `NOTICE`.
+
+### How judges evaluate
+
+**No wallet (5–10 min)**
+
+1. Open https://veilos-web.vercel.app — landing, Get Started, Preview organization, Privacy Inspector.
+2. Skim `packages/contracts/compact/authorization.compact` and `economy-preview.compact`.
+3. `pnpm install && pnpm --filter @velios/contracts test && pnpm --filter @velios/web test` (Node 22).
+
+**Full Midnight (optional)**
+
+```bash
+# WSL/Linux/macOS, Node 22, Docker, https://github.com/midnightntwrk/compact
+pnpm install
+pnpm env:up
+pnpm compile:contracts
+pnpm test
+pnpm dev
+```
+
+Lace / 1AM: Preview network. Proof server `http://127.0.0.1:6300` or wallet Proof Station. Never paste a seed into the UI. `AUTHORIZED` is only `SucceedEntirely` plus an exact indexer action id.
+
+**Dual-ledger model:** private witnesses (policy, credentials, ballots, bids) vs public commitments, ids, receipts, and unshielded NIGHT amount/recipient. Failed Compact `assert`s write nothing.
+
+## Why Veilos
 
 Organizations should not have to choose between blockchain verifiability and business confidentiality. VELIOS lets humans set private authorization policies for AI agents, then uses Midnight Compact circuits to prove an action was allowed without publishing the policy values, credentials, or internal financial state.
 
@@ -151,4 +193,4 @@ Matrix: `docs/test-matrix.md`. Integration tests do not mock Midnight; they skip
 
 ## License
 
-Apache License 2.0. See `LICENSE`.
+Apache License 2.0. See `LICENSE` and `NOTICE`.

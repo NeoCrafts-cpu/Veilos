@@ -1,0 +1,16 @@
+Veilos
+Copyright 2026 NeoCrafts-cpu
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may not use this file except in compliance with the License.
+
+This product includes software and documentation patterns from the
+Midnight Network ecosystem, used under Apache License 2.0:
+
+- midnightntwrk/example-hello-world — MidnightJS 4.1.1 provider factories,
+  Preview network endpoints, and local Docker image pins
+- midnightntwrk/compact — Compact language 0.23 / compiler 0.31.1
+- @midnight-ntwrk/* packages listed in docs/dependency-report.md
+
+See LICENSE for the full Apache License 2.0 text.
+See MIDNIGHT.md and docs/dependency-report.md for version pins and attribution.
