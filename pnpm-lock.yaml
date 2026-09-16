@@ -111,9 +111,6 @@ importers:
 
   packages/auditor:
     dependencies:
-      '@velios/credentials':
-        specifier: workspace:*
-        version: link:../credentials
       '@velios/policy-engine':
         specifier: workspace:*
         version: link:../policy-engine
