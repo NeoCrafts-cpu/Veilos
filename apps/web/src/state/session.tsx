@@ -129,7 +129,9 @@ export type SessionValue = {
   disconnectWallet: () => void;
   walletError: string | null;
   ledgerError: string | null;
-  busyAction: "idle" | "createAgent" | "refresh" | "join" | "policy" | "payment" | "deploy" | "connect" | "vault";
+  busyAction: "idle" | "createAgent" | "refresh" | "join" | "policy" | "payment" | "deploy" | "connect" | "vault" | "economy" | "governance" | "procurement" | "auditor";
+  midnightProviders: unknown;
+  withOperatorPassphrase: <T>(fn: (passphrase: string) => Promise<T>) => Promise<T>;
   dustReady: boolean | null;
   choosePreview: () => void;
   startOwnerSetup: () => void;
@@ -614,6 +616,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ledgerError,
       busy,
       busyAction,
+      midnightProviders: providers,
+      withOperatorPassphrase: async (fn) => {
+        const passphrase = passphraseRef.current;
+        if (!passphrase) throw new Error("Unlock the operator vault first.");
+        return fn(passphrase);
+      },
       dustReady,
       setupDraft,
       setSetupDraft,

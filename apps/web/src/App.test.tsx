@@ -53,6 +53,7 @@ describe("Wave 1 UI", () => {
     expect(screen.getAllByRole("link", { name: /skip to main content/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("navigation", { name: /primary/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /^get started$/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^docs$/i })).toBeTruthy();
   });
 
   it("P4 public session slice has no policy integers", () => {

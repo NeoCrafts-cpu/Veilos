@@ -16,6 +16,8 @@
     "@midnight-ntwrk/ledger-v8": "8.1.0",
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
     "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
+    "@velios/contracts": "workspace:*",
+    "@velios/credentials": "workspace:*",
     "@velios/economy": "workspace:*",
     "@velios/midnight": "workspace:*",
     "@velios/policy-engine": "workspace:*",

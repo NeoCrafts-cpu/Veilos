@@ -59,6 +59,34 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
   );
 }
 
+function jsonReplacer(_key: string, value: unknown): unknown {
+  if (typeof value === "bigint") {
+    return { __velios: "bigint", value: value.toString() };
+  }
+  if (value instanceof Uint8Array) {
+    return {
+      __velios: "bytes",
+      value: [...value].map((byte) => byte.toString(16).padStart(2, "0")).join(""),
+    };
+  }
+  return value;
+}
+
+function jsonReviver(_key: string, value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const record = value as { __velios?: unknown; value?: unknown };
+  if (record.__velios === "bigint" && typeof record.value === "string") {
+    return BigInt(record.value);
+  }
+  if (record.__velios === "bytes" && typeof record.value === "string") {
+    const hex = record.value;
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i += 1) out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return out;
+  }
+  return value;
+}
+
 async function encryptJson(value: unknown, password: string): Promise<Envelope> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -66,7 +94,7 @@ async function encryptJson(value: unknown, password: string): Promise<Envelope> 
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv as BufferSource },
     key,
-    new TextEncoder().encode(JSON.stringify(value)),
+    new TextEncoder().encode(JSON.stringify(value, jsonReplacer)),
   );
   return {
     format: "velios-aes-gcm",
@@ -83,7 +111,7 @@ async function decryptJson<T>(envelope: Envelope, password: string): Promise<T> 
     key,
     b64ToBytes(envelope.ciphertext) as BufferSource,
   );
-  return JSON.parse(new TextDecoder().decode(plain)) as T;
+  return JSON.parse(new TextDecoder().decode(plain), jsonReviver) as T;
 }
 
 export function encryptedBrowserPrivateStateProvider<PSI extends PrivateStateId, PS = unknown>(

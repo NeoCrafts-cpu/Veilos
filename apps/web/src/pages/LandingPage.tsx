@@ -52,17 +52,17 @@ const NEXT_MODULES = [
   {
     title: "Identity & credentials",
     body: "Prove a fact about a member or agent without dumping the credential.",
-    wave: "In build",
+    wave: "Live",
   },
   {
     title: "Governance",
     body: "Private eligibility and ballot commitments. Only the finalized aggregate is public. Trustless tally completeness is experimental.",
-    wave: "In build",
+    wave: "Live",
   },
   {
     title: "Procurement",
     body: "Private bids, public validity. Suppliers stay masked until disclosure.",
-    wave: "In build",
+    wave: "Live",
   },
   {
     title: "Credit & reputation",
@@ -77,7 +77,7 @@ const NEXT_MODULES = [
   {
     title: "Selective disclosure",
     body: "Auditors see what they are entitled to. Everyone else sees a proof.",
-    wave: "In build",
+    wave: "Live",
   },
 ] as const;
 
@@ -151,6 +151,9 @@ export function LandingPage() {
             {section.label}
           </a>
         ))}
+        <Link to="/docs" onClick={() => setMenuOpen(false)}>
+          Docs
+        </Link>
         <Link to="/app/privacy" onClick={() => setMenuOpen(false)}>
           Privacy design
         </Link>
@@ -373,10 +376,10 @@ export function LandingPage() {
               <h3>Wave 1 · Core</h3>
               <p>Organization, agent, private policy, proof, Compact, Midnight transaction, Privacy Inspector.</p>
             </Reveal>
-            <Reveal delayMs={80} as="article" className="card roadmap-card">
-              <div className="label">Next</div>
+            <Reveal delayMs={80} as="article" className="card roadmap-card" data-wave="2">
+              <div className="label">Current</div>
               <h3>Wave 2 · Economy</h3>
-              <p>DID, credentials, treasury, payments, governance, procurement, auditors.</p>
+              <p>Credentials, unshielded treasury, private ballots, sealed bids, scoped auditor grants on Preview-sized contracts.</p>
             </Reveal>
             <Reveal delayMs={160} as="article" className="card roadmap-card">
               <div className="label">Later</div>

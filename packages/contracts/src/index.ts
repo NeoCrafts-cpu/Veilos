@@ -30,6 +30,15 @@ export {
 export type { EconomyMerklePath, VeliosEconomyPrivateState } from "./economy-witnesses.js";
 export { createEconomyPreviewPrivateState, economyPreviewWitnesses } from "./economy-preview-witnesses.js";
 export type { EconomyPreviewPrivateState } from "./economy-preview-witnesses.js";
+export { createGovernancePreviewPrivateState, governancePreviewWitnesses } from "./governance-preview-witnesses.js";
+export type { GovernancePreviewPrivateState } from "./governance-preview-witnesses.js";
+export {
+  createProcurementPreviewPrivateState,
+  procurementPreviewWitnesses,
+} from "./procurement-preview-witnesses.js";
+export type { ProcurementPreviewPrivateState } from "./procurement-preview-witnesses.js";
+export { createAuditorPreviewPrivateState, auditorPreviewWitnesses } from "./auditor-preview-witnesses.js";
+export type { AuditorPreviewPrivateState } from "./auditor-preview-witnesses.js";
 
 export async function loadCompiledEconomy(): Promise<{
   Contract: unknown;
@@ -52,6 +61,51 @@ export async function loadCompiledEconomyPreview(): Promise<{
 } | null> {
   try {
     const generated = await import("../managed/economy-preview/contract/index.js");
+    return {
+      Contract: generated.Contract,
+      ledger: generated.ledger,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadCompiledGovernancePreview(): Promise<{
+  Contract: unknown;
+  ledger: unknown;
+} | null> {
+  try {
+    const generated = await import("../managed/governance-preview/contract/index.js");
+    return {
+      Contract: generated.Contract,
+      ledger: generated.ledger,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadCompiledProcurementPreview(): Promise<{
+  Contract: unknown;
+  ledger: unknown;
+} | null> {
+  try {
+    const generated = await import("../managed/procurement-preview/contract/index.js");
+    return {
+      Contract: generated.Contract,
+      ledger: generated.ledger,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadCompiledAuditorPreview(): Promise<{
+  Contract: unknown;
+  ledger: unknown;
+} | null> {
+  try {
+    const generated = await import("../managed/auditor-preview/contract/index.js");
     return {
       Contract: generated.Contract,
       ledger: generated.ledger,

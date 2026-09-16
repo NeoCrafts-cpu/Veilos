@@ -37,12 +37,13 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
   }
 
   const button = props as ButtonAsButton;
+  const { loading: isLoading, loadingLabel: _loadingLabel, variant: _variant, children: _children, className: _className, ...rest } = button;
   return (
     <button
-      {...button}
+      {...rest}
       className={classes}
-      disabled={button.disabled || loading}
-      aria-busy={loading}
+      disabled={button.disabled || isLoading}
+      aria-busy={isLoading}
     >
       {label}
     </button>

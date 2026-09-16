@@ -46,6 +46,15 @@ fi
 if copy_circuit_assets "$ROOT/packages/contracts/managed/economy-preview"; then
   copied_any=1
 fi
+if copy_circuit_assets "$ROOT/packages/contracts/managed/governance-preview"; then
+  copied_any=1
+fi
+if copy_circuit_assets "$ROOT/packages/contracts/managed/procurement-preview"; then
+  copied_any=1
+fi
+if copy_circuit_assets "$ROOT/packages/contracts/managed/auditor-preview"; then
+  copied_any=1
+fi
 
 if [[ "$copied_any" -eq 0 ]]; then
   if public_ready; then

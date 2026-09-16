@@ -1,0 +1,59 @@
+// VELIOS Wave 2 Preview auditor grants.
+// One impure circuit: a public, expiring disclosure grant. Claim bodies stay
+// in the operator's encrypted vault; this contract only publishes the grant
+// commitment, auditor id, and expiry.
+
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+enum OrganizationStatus { inactive, active }
+
+struct DisclosurePublic {
+  auditorId: Bytes<32>;
+  scopeCommitment: Bytes<32>;
+  expires: Uint<64>;
+}
+
+export ledger organizationId: Bytes<32>;
+export ledger organizationStatus: OrganizationStatus;
+export ledger adminCommitment: Bytes<32>;
+export ledger disclosures: Map<Bytes<32>, DisclosurePublic>;
+export ledger disclosureCount: Counter;
+
+witness ownerSecret(): Bytes<32>;
+
+export circuit ownerCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:owner:"),
+    sk
+  ]);
+}
+
+circuit assertAdmin(): [] {
+  assert(adminCommitment == ownerCommitmentOf(ownerSecret()), "unauthorized");
+}
+
+constructor(orgId: Bytes<32>) {
+  organizationId = disclose(orgId);
+  organizationStatus = OrganizationStatus.active;
+  adminCommitment = disclose(ownerCommitmentOf(ownerSecret()));
+}
+
+export circuit recordDisclosure(
+  disclosureId: Bytes<32>,
+  auditorId: Bytes<32>,
+  scopeCommitment: Bytes<32>,
+  expires: Uint<64>
+): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicId = disclose(disclosureId);
+  assert(!disclosures.member(publicId), "disclosure exists");
+  assert(kernel.blockTimeGreaterThan(0), "clock missing");
+  disclosures.insert(publicId, DisclosurePublic {
+    auditorId: disclose(auditorId),
+    scopeCommitment: disclose(scopeCommitment),
+    expires: disclose(expires)
+  });
+  disclosureCount.increment(1);
+}

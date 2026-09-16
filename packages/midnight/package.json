@@ -16,7 +16,10 @@
     "./status": "./src/status.ts",
     "./client": "./src/client.ts",
     "./indexer-confirm": "./src/indexer-confirm.ts",
-    "./economy-client": "./src/economy-client.ts"
+    "./economy-client": "./src/economy-client.ts",
+    "./companion-client": "./src/companion-client.ts",
+    "./economy-ledger": "./src/economy-ledger.ts",
+    "./user-address": "./src/user-address.ts"
   },
   "scripts": {
     "test": "vitest run"
@@ -36,6 +39,7 @@
     "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
     "@midnight-ntwrk/midnight-js-types": "4.1.1",
     "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
     "@velios/contracts": "workspace:*",
     "@velios/policy-engine": "workspace:*",
     "@velios/shared-types": "workspace:*"

@@ -37,6 +37,11 @@ describe("encrypted browser private-state store", () => {
     expect(JSON.stringify(stored)).not.toMatch(/hidden-secret|perActionLimit|99/);
     const next = await provider.get("velios");
     expect(next).toEqual({ ownerSecret: "hidden-secret", perActionLimit: 99 });
+    await provider.set("velios-bytes", { ownerSecret: new Uint8Array([9, 8, 7]), limit: 12n });
+    const revived = (await provider.get("velios-bytes")) as { ownerSecret: Uint8Array; limit: bigint };
+    expect(revived.ownerSecret).toBeInstanceOf(Uint8Array);
+    expect([...revived.ownerSecret]).toEqual([9, 8, 7]);
+    expect(revived.limit).toBe(12n);
   });
 
   it("exports an AES-GCM envelope, not plaintext JSON", async () => {

@@ -14,6 +14,9 @@
     "compile": "bash ./scripts/compile.sh",
     "compile:economy": "bash ./scripts/compile-economy.sh",
     "compile:economy-preview": "bash ./scripts/compile-economy-preview.sh",
+    "compile:governance-preview": "bash ./scripts/compile-governance-preview.sh",
+    "compile:procurement-preview": "bash ./scripts/compile-procurement-preview.sh",
+    "compile:auditor-preview": "bash ./scripts/compile-auditor-preview.sh",
     "test": "vitest run"
   },
   "dependencies": {

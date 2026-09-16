@@ -1,0 +1,190 @@
+// VELIOS Wave 2 Preview procurement.
+// Preview-sized companion: five impure circuits, Map state, unique circuit ids.
+// Bid amounts stay in witnesses. The public award binds a treasury action id
+// from economy-preview; Compact 0.23 cannot look up another contract's map.
+// Settlement still happens on economy-preview with that same action id.
+
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+enum OrganizationStatus { inactive, active }
+enum ProcurementStatus { open, awarded }
+
+struct ProcurementPublic {
+  windowStart: Uint<64>;
+  windowEnd: Uint<64>;
+  eligibility: Bytes<32>;
+  status: ProcurementStatus;
+  awardCommitment: Bytes<32>;
+  winnerBidCommitment: Bytes<32>;
+  treasuryActionId: Bytes<32>;
+}
+
+export ledger organizationId: Bytes<32>;
+export ledger organizationStatus: OrganizationStatus;
+export ledger adminCommitment: Bytes<32>;
+export ledger bidders: Map<Bytes<32>, Boolean>;
+export ledger revokedBidders: Set<Bytes<32>>;
+export ledger bidderCount: Counter;
+export ledger procurements: Map<Bytes<32>, ProcurementPublic>;
+export ledger bidCommitments: Map<Bytes<32>, Bytes<32>>;
+export ledger procurementCount: Counter;
+
+witness ownerSecret(): Bytes<32>;
+witness holderSecret(): Bytes<32>;
+witness revocationSecret(): Bytes<32>;
+witness bidSalt(): Bytes<32>;
+witness bidAmount(): Uint<64>;
+witness awardSalt(): Bytes<32>;
+
+circuit encodeUint64(n: Uint<64>): Bytes<32> {
+  return n as Field as Bytes<32>;
+}
+
+export circuit ownerCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:owner:"),
+    sk
+  ]);
+}
+
+export circuit holderCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:holder:"),
+    sk
+  ]);
+}
+
+export circuit bidderRevocationOf(holder: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:bidrev:"),
+    holder,
+    secret
+  ]);
+}
+
+export circuit bidCommitmentOf(
+  procurementId: Bytes<32>,
+  holder: Bytes<32>,
+  amount: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<5, Bytes<32>>>([
+    pad(32, "velios:bid:"),
+    procurementId,
+    holder,
+    encodeUint64(amount),
+    salt
+  ]);
+}
+
+export circuit awardCommitmentOf(
+  procurementId: Bytes<32>,
+  winnerBid: Bytes<32>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "velios:award:"),
+    procurementId,
+    winnerBid,
+    salt
+  ]);
+}
+
+export circuit bidKeyOf(procurementId: Bytes<32>, holder: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:bidkey:"),
+    procurementId,
+    holder
+  ]);
+}
+
+circuit assertAdmin(): [] {
+  assert(adminCommitment == ownerCommitmentOf(ownerSecret()), "unauthorized");
+}
+
+constructor(orgId: Bytes<32>) {
+  organizationId = disclose(orgId);
+  organizationStatus = OrganizationStatus.active;
+  adminCommitment = disclose(ownerCommitmentOf(ownerSecret()));
+}
+
+export circuit registerBidder(commitment: Bytes<32>): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicCommitment = disclose(commitment);
+  assert(!bidders.member(publicCommitment), "bidder exists");
+  bidders.insert(publicCommitment, disclose(true));
+  bidderCount.increment(1);
+}
+
+export circuit revokeBidder(nullifier: Bytes<32>): [] {
+  assertAdmin();
+  const publicNullifier = disclose(nullifier);
+  assert(!revokedBidders.member(publicNullifier), "already revoked");
+  revokedBidders.insert(publicNullifier);
+}
+
+export circuit createProcurement(
+  procurementId: Bytes<32>,
+  windowStart: Uint<64>,
+  windowEnd: Uint<64>,
+  eligibility: Bytes<32>
+): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicId = disclose(procurementId);
+  assert(!procurements.member(publicId), "procurement exists");
+  assert(windowEnd > windowStart, "invalid period");
+  procurements.insert(publicId, ProcurementPublic {
+    windowStart: disclose(windowStart),
+    windowEnd: disclose(windowEnd),
+    eligibility: disclose(eligibility),
+    status: ProcurementStatus.open,
+    awardCommitment: default<Bytes<32>>,
+    winnerBidCommitment: default<Bytes<32>>,
+    treasuryActionId: default<Bytes<32>>
+  });
+  procurementCount.increment(1);
+}
+
+export circuit submitBid(procurementId: Bytes<32>): [] {
+  const publicId = disclose(procurementId);
+  assert(procurements.member(publicId), "procurement missing");
+  const lot = procurements.lookup(publicId);
+  assert(lot.status == ProcurementStatus.open, "procurement closed");
+  assert(kernel.blockTimeGreaterThan(lot.windowStart), "bidding not started");
+  assert(!kernel.blockTimeGreaterThan(lot.windowEnd), "bidding elapsed");
+  const holder = holderCommitmentOf(holderSecret());
+  assert(bidders.member(disclose(holder)), "not a bidder");
+  const revoked = bidderRevocationOf(holder, revocationSecret());
+  assert(!revokedBidders.member(disclose(revoked)), "bidder revoked");
+  const bidC = bidCommitmentOf(publicId, holder, bidAmount(), bidSalt());
+  const bidKey = bidKeyOf(publicId, holder);
+  assert(!bidCommitments.member(disclose(bidKey)), "duplicate bid");
+  bidCommitments.insert(disclose(bidKey), disclose(bidC));
+}
+
+export circuit awardProcurement(
+  procurementId: Bytes<32>,
+  winnerBid: Bytes<32>,
+  treasuryActionId: Bytes<32>
+): [] {
+  assertAdmin();
+  const publicId = disclose(procurementId);
+  const publicActionId = disclose(treasuryActionId);
+  const publicWinner = disclose(winnerBid);
+  assert(procurements.member(publicId), "procurement missing");
+  const lot = procurements.lookup(publicId);
+  assert(lot.status == ProcurementStatus.open, "procurement closed");
+  const awardC = awardCommitmentOf(publicId, publicWinner, awardSalt());
+  procurements.insert(publicId, ProcurementPublic {
+    windowStart: lot.windowStart,
+    windowEnd: lot.windowEnd,
+    eligibility: lot.eligibility,
+    status: ProcurementStatus.awarded,
+    awardCommitment: disclose(awardC),
+    winnerBidCommitment: publicWinner,
+    treasuryActionId: publicActionId
+  });
+}

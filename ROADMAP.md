@@ -1,64 +1,48 @@
 # VELIOS Roadmap
 
-## Wave 1 — VELIOS CORE
+Status is taken from the repository, not from marketing copy.
 
-Goal:
-Prove the core private authorization loop.
+## Completed — Wave 1 CORE
 
-Deliver:
-- organization
-- agent
-- private policy
-- action request
-- proof
-- Compact verification
-- real Midnight transaction
-- indexer result
+Live on Midnight Preview (`authorization.compact`):
+
+- organization deploy and join
+- founding-member registration
+- agent create + private policy commitments
+- `authorizeAction` fail-closed Compact proof
+- operator vault (PBKDF2 + AES-GCM)
+- DApp Connector v4 wallet
+- official Preview indexer read-back
 - Privacy Inspector
-- contract tests
-- E2E tests
 
-## Wave 2 — VELIOS ECONOMY
+Known gap: Preview `authorizeAction` indexer evidence is not retained yet.
 
-Status: implemented in-repo. Official Midnight DID/VC adapters are experimental until MidnightJS 4.1.1 compatibility is proven. Preview economy evidence is not retained yet.
+## Current — Wave 2 ECONOMY (Preview-sized)
 
-Deliver:
-- organization-issued private credentials and revocation
-- intent-bound unshielded NIGHT treasury
-- private ballot commitments / public final tally
-- sealed procurement bound to treasury authorization
-- scoped auditor disclosure
+Live in this build:
 
-## Wave 3 — VELIOS NETWORK
+- `economy-preview.compact` published on Preview (credentials, `authorizePayment`, `depositNight`, `settleAuthorizedPayment`)
+- Organization-issued credentials (issue / expiry / revoke)
+- Unshielded NIGHT deposit and authorization-bound settlement
+- Preview-sized companion contracts: `governance-preview`, `procurement-preview`, `auditor-preview`
+- In-app Docs + truthful roadmap
 
-Goal:
-Turn VELIOS into a broader autonomous organization protocol.
+Experimental / not claimed as complete:
 
-Deliver:
-- credit
-- reputation
-- escrow
-- agent marketplace
-- external verification
-- Effectstream integration where justified
-- Kuira/mobile flow where justified
-- developer APIs
+- Official Midnight DID/VC (adapter targets MidnightJS 4.0.2; Veilos is 4.1.1)
+- Trustless ballot tally completeness
+- Full 12-circuit `economy.compact` on Preview (rejected: block limits)
 
-## Implementation order
+## Next
 
-Do not skip ahead.
+- Retain Wave 1 `authorizeAction` Preview evidence
+- Publish companion contract addresses after SucceedEntirely deploys
+- Compact cross-contract award lookup when the language supports it
 
-```text
-PHASE 0   Repository + tooling
-PHASE 1   Architecture docs
-PHASE 2   Compact core
-PHASE 3   Contract tests
-PHASE 4   MidnightJS / wallet / proof / indexer
-PHASE 5   Real end-to-end transaction
-PHASE 6   Wave 1 UI
-PHASE 7   Privacy Inspector
-PHASE 8   Security + QA
-PHASE 9   Demo + README + submission
-```
+## Future — Wave 3 NETWORK
 
-Progress is tracked in `docs/wave-progress.md`.
+- credit and reputation
+- escrow and agent marketplace
+- Effectstream / Kuira where justified
+- wallet proving API without a hosted prover
+- official DID/VC once MidnightJS 4.1.1 compatible

@@ -17,6 +17,10 @@ const BUSY_COPY: Record<string, string> = {
   refresh: "Refreshing public organization data from the indexer.",
   connect: "Connecting the Midnight wallet.",
   vault: "Protecting operator access.",
+  economy: "Submitting a Wave 2 economy circuit. Approve the wallet popup if it appears.",
+  governance: "Submitting a governance circuit. Approve the wallet popup if it appears.",
+  procurement: "Submitting a procurement circuit. Approve the wallet popup if it appears.",
+  auditor: "Recording a disclosure grant on Midnight.",
 };
 
 export function Shell() {
@@ -112,6 +116,9 @@ export function Shell() {
         </NavLink>
         <NavLink to="/app/auditor" onClick={closeNav}>
           Auditor
+        </NavLink>
+        <NavLink to="/docs" onClick={closeNav}>
+          Docs
         </NavLink>
       </nav>
       {busyAction !== "idle" && BUSY_COPY[busyAction] ? (

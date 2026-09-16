@@ -49,3 +49,8 @@ export function publishedDeploymentFor(networkId: string): PublishedDeployment |
   if (networkId === "preview") return PREVIEW_DEPLOYMENT;
   return null;
 }
+
+export function publishedEconomyDeploymentFor(networkId: string): PublishedEconomyDeployment | null {
+  if (networkId === "preview") return PREVIEW_ECONOMY_DEPLOYMENT;
+  return null;
+}

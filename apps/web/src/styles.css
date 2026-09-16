@@ -542,7 +542,9 @@ h3,
 
 .form input,
 .form textarea,
-.form-field input {
+.form select,
+.form-field input,
+.form-field select {
   background: #111;
   border: var(--border-width) solid var(--off-white);
   min-height: 44px;
@@ -553,7 +555,9 @@ h3,
 
 .form input:focus-visible,
 .form textarea:focus-visible,
-.form-field input:focus-visible {
+.form select:focus-visible,
+.form-field input:focus-visible,
+.form-field select:focus-visible {
   outline: 3px solid var(--success-lime);
   outline-offset: 2px;
 }

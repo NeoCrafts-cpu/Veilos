@@ -19,9 +19,10 @@
 
 | Claim | Status |
 | --- | --- |
-| Implemented in-repo | Yes — `economy.compact` plus credentials, treasury, governance, procurement, auditor packages and `/app/*` routes |
-| Tested | Unit/replica/UI leakage tests; Compact circuit presence when artifacts exist |
-| Proven on Preview | Deploy of `economy-preview.compact` is retained. Full facade and later circuits are not. See `docs/preview-evidence.md` |
+| Implemented in-repo | Yes — `economy-preview.compact` on Preview plus Preview-sized governance/procurement/auditor companions, wired through MidnightJS `submitCallTx` and indexer read-back |
+| UI | Credentials, treasury/settle, governance, procurement, auditor tabs execute real circuits. Docs lives in the main nav. |
+| Tested | Unit/replica/UI leakage tests; Compact circuit presence when artifacts exist; economy ledger projection and fail-closed confirmation tests |
+| Proven on Preview | `economy-preview` deploy is retained. Full 12-circuit `economy.compact` cannot deploy (block limits). Companion addresses are deployed from the app, not baked until SucceedEntirely. |
 
 Official DID/VC remain experimental adapters (MidnightJS 4.0.2 vs pin 4.1.1). Unshielded settlement leakage is explicit. Tally completeness stays behind `experimentalTallyAdapter`.
 

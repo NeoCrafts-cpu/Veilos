@@ -1,0 +1,181 @@
+// VELIOS Wave 2 Preview governance.
+// Preview rejects the full 12-circuit economy.compact facade (block limits).
+// This companion is sized like economy-preview: five impure circuits, Map state,
+// no HistoricMerkleTree. Voter eligibility is a public holder commitment;
+// the ballot choice stays in witnesses. Circuit ids are unique so ZK artifacts
+// do not collide with economy-preview issueCredential keys.
+// Cross-contract credential Maps cannot be shared in Compact 0.23.
+
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+enum OrganizationStatus { inactive, active }
+enum ProposalStatus { open, finalized }
+
+struct ProposalPublic {
+  actionCommitment: Bytes<32>;
+  voteStart: Uint<64>;
+  voteEnd: Uint<64>;
+  quorumCommitment: Bytes<32>;
+  status: ProposalStatus;
+  yesCount: Uint<64>;
+  noCount: Uint<64>;
+}
+
+export ledger organizationId: Bytes<32>;
+export ledger organizationStatus: OrganizationStatus;
+export ledger adminCommitment: Bytes<32>;
+export ledger voters: Map<Bytes<32>, Boolean>;
+export ledger revokedVoters: Set<Bytes<32>>;
+export ledger voterCount: Counter;
+export ledger proposals: Map<Bytes<32>, ProposalPublic>;
+export ledger voteNullifiers: Set<Bytes<32>>;
+export ledger ballotCommitments: Map<Bytes<32>, Bytes<32>>;
+export ledger proposalCount: Counter;
+
+witness ownerSecret(): Bytes<32>;
+witness holderSecret(): Bytes<32>;
+witness revocationSecret(): Bytes<32>;
+witness ballotChoice(): Uint<64>;
+witness ballotSalt(): Bytes<32>;
+witness tallyYes(): Uint<64>;
+witness tallyNo(): Uint<64>;
+
+circuit encodeUint64(n: Uint<64>): Bytes<32> {
+  return n as Field as Bytes<32>;
+}
+
+export circuit ownerCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:owner:"),
+    sk
+  ]);
+}
+
+export circuit holderCommitmentOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:holder:"),
+    sk
+  ]);
+}
+
+export circuit voterRevocationOf(holder: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:voterrev:"),
+    holder,
+    secret
+  ]);
+}
+
+export circuit ballotCommitmentOf(
+  proposalId: Bytes<32>,
+  holder: Bytes<32>,
+  choice: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<5, Bytes<32>>>([
+    pad(32, "velios:ballot:"),
+    proposalId,
+    holder,
+    encodeUint64(choice),
+    salt
+  ]);
+}
+
+export circuit voteNullifierOf(proposalId: Bytes<32>, holder: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "velios:votenul:"),
+    proposalId,
+    holder
+  ]);
+}
+
+circuit assertAdmin(): [] {
+  assert(adminCommitment == ownerCommitmentOf(ownerSecret()), "unauthorized");
+}
+
+constructor(orgId: Bytes<32>) {
+  organizationId = disclose(orgId);
+  organizationStatus = OrganizationStatus.active;
+  adminCommitment = disclose(ownerCommitmentOf(ownerSecret()));
+}
+
+export circuit registerVoter(commitment: Bytes<32>): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicCommitment = disclose(commitment);
+  assert(!voters.member(publicCommitment), "voter exists");
+  voters.insert(publicCommitment, disclose(true));
+  voterCount.increment(1);
+}
+
+export circuit revokeVoter(nullifier: Bytes<32>): [] {
+  assertAdmin();
+  const publicNullifier = disclose(nullifier);
+  assert(!revokedVoters.member(publicNullifier), "already revoked");
+  revokedVoters.insert(publicNullifier);
+}
+
+export circuit createProposal(
+  proposalId: Bytes<32>,
+  actionCommitment: Bytes<32>,
+  voteStart: Uint<64>,
+  voteEnd: Uint<64>,
+  quorumCommitment: Bytes<32>
+): [] {
+  assertAdmin();
+  assert(organizationStatus == OrganizationStatus.active, "organization inactive");
+  const publicId = disclose(proposalId);
+  assert(!proposals.member(publicId), "proposal exists");
+  assert(voteEnd > voteStart, "invalid period");
+  proposals.insert(publicId, ProposalPublic {
+    actionCommitment: disclose(actionCommitment),
+    voteStart: disclose(voteStart),
+    voteEnd: disclose(voteEnd),
+    quorumCommitment: disclose(quorumCommitment),
+    status: ProposalStatus.open,
+    yesCount: 0,
+    noCount: 0
+  });
+  proposalCount.increment(1);
+}
+
+export circuit castBallot(proposalId: Bytes<32>): [] {
+  const publicId = disclose(proposalId);
+  assert(proposals.member(publicId), "proposal missing");
+  const proposal = proposals.lookup(publicId);
+  assert(proposal.status == ProposalStatus.open, "proposal closed");
+  assert(kernel.blockTimeGreaterThan(proposal.voteStart), "vote not started");
+  assert(!kernel.blockTimeGreaterThan(proposal.voteEnd), "vote elapsed");
+  const holder = holderCommitmentOf(holderSecret());
+  assert(voters.member(disclose(holder)), "not a voter");
+  const revoked = voterRevocationOf(holder, revocationSecret());
+  assert(!revokedVoters.member(disclose(revoked)), "voter revoked");
+  const nullifier = voteNullifierOf(publicId, holder);
+  assert(!voteNullifiers.member(disclose(nullifier)), "already voted");
+  voteNullifiers.insert(disclose(nullifier));
+  const choice = ballotChoice();
+  assert(choice == 0 || choice == 1, "invalid ballot");
+  const ballotC = ballotCommitmentOf(publicId, holder, choice, ballotSalt());
+  ballotCommitments.insert(disclose(nullifier), disclose(ballotC));
+}
+
+export circuit finalizeProposal(proposalId: Bytes<32>): [] {
+  assertAdmin();
+  const publicId = disclose(proposalId);
+  assert(proposals.member(publicId), "proposal missing");
+  const proposal = proposals.lookup(publicId);
+  assert(proposal.status == ProposalStatus.open, "proposal closed");
+  assert(kernel.blockTimeGreaterThan(proposal.voteEnd), "vote still open");
+  const yes = tallyYes();
+  const no = tallyNo();
+  proposals.insert(publicId, ProposalPublic {
+    actionCommitment: proposal.actionCommitment,
+    voteStart: proposal.voteStart,
+    voteEnd: proposal.voteEnd,
+    quorumCommitment: proposal.quorumCommitment,
+    status: ProposalStatus.finalized,
+    yesCount: disclose(yes),
+    noCount: disclose(no)
+  });
+}

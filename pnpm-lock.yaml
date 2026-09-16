@@ -47,6 +47,12 @@ importers:
       '@subsquid/util-internal-json':
         specifier: 1.2.4
         version: 1.2.4
+      '@velios/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@velios/credentials':
+        specifier: workspace:*
+        version: link:../../packages/credentials
       '@velios/economy':
         specifier: workspace:*
         version: link:../../packages/economy
@@ -316,6 +322,9 @@ importers:
       '@midnight-ntwrk/onchain-runtime-v3':
         specifier: 3.0.0
         version: 3.0.0
+      '@midnight-ntwrk/wallet-sdk-address-format':
+        specifier: 3.1.2
+        version: 3.1.2
       '@velios/contracts':
         specifier: workspace:*
         version: link:../contracts

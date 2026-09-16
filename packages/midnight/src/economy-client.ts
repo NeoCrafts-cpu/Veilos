@@ -1,131 +1,80 @@
 /**
- * Wave 2 economy client. Uses official MidnightJS deployContract / submitCallTx.
- * Settlement is authorized only after SucceedEntirely and exact indexer read-back.
+ * Wave 2 economy-preview client. Official MidnightJS deployContract / submitCallTx.
+ * AUTHORIZED / settled is never inferred from frontend state.
  */
 
 import {
+  createEconomyPreviewPrivateState,
   economyPreviewWitnesses,
   economyWitnesses,
   loadCompiledEconomy,
   loadCompiledEconomyPreview,
+  type EconomyPreviewPrivateState,
+  type VeliosEconomyPrivateState,
 } from "@velios/contracts";
-import { asHex32, hex32ToBytes, MIDNIGHT_SUCCESS_STATUS, type Hex32 } from "@velios/shared-types";
-import type { EconomyPreviewPrivateState, VeliosEconomyPrivateState } from "@velios/contracts";
-import { organizationIdFromName } from "./ids.js";
-import { waitForPublicAction, type LedgerReader } from "./indexer-confirm.js";
+import { asHex32, MIDNIGHT_SUCCESS_STATUS, type Hex32 } from "@velios/shared-types";
+import { compileNamedContract, deployNamedOrganization, submitNamedCircuit } from "./compiled-call.js";
+import {
+  ledgerStateValue,
+  projectEconomyLedger,
+  type CompactEconomyLedger,
+  type EconomyLedgerView,
+} from "./economy-ledger.js";
+import { writeCircuitPrivateState, type PrivateStateStore } from "./private-state-store.js";
 
 export const ECONOMY_PRIVATE_STATE_ID = "VeliosEconomyPrivateState";
+export { createEconomyPreviewPrivateState };
 
-function readTxStatus(finalized: unknown): string {
-  if (!finalized || typeof finalized !== "object") return "";
-  const record = finalized as Record<string, unknown>;
-  const publicData = record.public;
-  if (publicData && typeof publicData === "object") {
-    const status = (publicData as Record<string, unknown>).status;
-    if (typeof status === "string") return status;
+export type EconomyCallOptions = {
+  compiledAssetsPath: string;
+  preview?: boolean;
+};
+
+async function compiledEconomy(options: EconomyCallOptions) {
+  if (options.preview) {
+    return compileNamedContract({
+      name: "VeliosEconomyPreview",
+      loaded: await loadCompiledEconomyPreview(),
+      witnesses: economyPreviewWitnesses,
+      compiledAssetsPath: options.compiledAssetsPath,
+      missing: "environment missing: economy-preview compact artifacts not compiled",
+    });
   }
-  if (typeof record.status === "string") return record.status;
-  return "";
-}
-
-function readTxId(finalized: unknown): string {
-  if (!finalized || typeof finalized !== "object") return "";
-  const record = finalized as Record<string, unknown>;
-  const publicData = record.public;
-  if (publicData && typeof publicData === "object") {
-    const txId = (publicData as Record<string, unknown>).txId ?? (publicData as Record<string, unknown>).txHash;
-    if (typeof txId === "string") return txId;
-  }
-  if (typeof record.txId === "string") return record.txId;
-  return "";
-}
-
-function readContractAddress(deployed: unknown): string {
-  const record = deployed as {
-    deployTxData?: { public?: { contractAddress?: string } };
-    contractAddress?: string;
-  };
-  return record.deployTxData?.public?.contractAddress ?? record.contractAddress ?? "";
-}
-
-async function compileEconomyContract(
-  name: string,
-  loaded: { Contract: unknown } | null,
-  witnesses: unknown,
-  compiledAssetsPath: string,
-  missing: string,
-): Promise<{ compiledContract: unknown }> {
-  if (!loaded) {
-    throw new Error(missing);
-  }
-  const { CompiledContract } = await import("@midnight-ntwrk/midnight-js-protocol/compact-js");
-  const withWitnesses =
-    (CompiledContract as { withWitnesses?: (w: unknown) => unknown }).withWitnesses ??
-    (CompiledContract as { withVacantWitnesses?: unknown }).withVacantWitnesses;
-  const compiledContract = (
-    CompiledContract as { make: (name: string, ctor: unknown) => { pipe: (...args: unknown[]) => unknown } }
-  )
-    .make(name, loaded.Contract)
-    .pipe(
-      typeof withWitnesses === "function" ? withWitnesses(witnesses) : withWitnesses,
-      (CompiledContract as { withCompiledFileAssets: (p: string) => unknown }).withCompiledFileAssets(
-        compiledAssetsPath,
-      ),
-    );
-  return { compiledContract };
+  return compileNamedContract({
+    name: "VeliosEconomy",
+    loaded: await loadCompiledEconomy(),
+    witnesses: economyWitnesses,
+    compiledAssetsPath: options.compiledAssetsPath,
+    missing: "environment missing: economy compact artifacts not compiled",
+  });
 }
 
 export async function requireCompiledEconomy(compiledAssetsPath: string): Promise<{
   compiledContract: unknown;
 }> {
-  return compileEconomyContract(
-    "VeliosEconomy",
-    await loadCompiledEconomy(),
-    economyWitnesses,
-    compiledAssetsPath,
-    "environment missing: economy compact artifacts not compiled",
-  );
+  return compiledEconomy({ compiledAssetsPath, preview: false });
 }
 
 export async function requireCompiledEconomyPreview(compiledAssetsPath: string): Promise<{
   compiledContract: unknown;
 }> {
-  return compileEconomyContract(
-    "VeliosEconomyPreview",
-    await loadCompiledEconomyPreview(),
-    economyPreviewWitnesses,
-    compiledAssetsPath,
-    "environment missing: economy-preview compact artifacts not compiled",
-  );
+  return compiledEconomy({ compiledAssetsPath, preview: true });
 }
 
 export async function deployEconomyOrganization(
   providers: unknown,
   organizationName: string,
   initialPrivateState: VeliosEconomyPrivateState | EconomyPreviewPrivateState,
-  options: { compiledAssetsPath: string; preview?: boolean },
+  options: EconomyCallOptions,
 ): Promise<{ contractAddress: string; organizationId: Hex32; status: string; txId: string }> {
-  const organizationId = organizationIdFromName(organizationName);
-  const { compiledContract } = options.preview
-    ? await requireCompiledEconomyPreview(options.compiledAssetsPath)
-    : await requireCompiledEconomy(options.compiledAssetsPath);
-  const { deployContract } = await import("@midnight-ntwrk/midnight-js-contracts");
-  const deployed = await deployContract(providers as never, {
+  const { compiledContract } = await compiledEconomy(options);
+  return deployNamedOrganization({
+    providers,
+    organizationName,
     compiledContract,
     privateStateId: ECONOMY_PRIVATE_STATE_ID,
     initialPrivateState,
-    args: [hex32ToBytes(organizationId)],
-  } as never);
-  const contractAddress = readContractAddress(deployed);
-  const status = readTxStatus((deployed as { deployTxData?: unknown }).deployTxData);
-  const txId = readTxId((deployed as { deployTxData?: unknown }).deployTxData);
-  if (status && status !== MIDNIGHT_SUCCESS_STATUS) {
-    throw new Error("economy deploy failed");
-  }
-  if (!contractAddress) {
-    throw new Error("economy deploy failed");
-  }
-  return { contractAddress, organizationId, status: status || MIDNIGHT_SUCCESS_STATUS, txId };
+  });
 }
 
 export async function callEconomyCircuit(
@@ -133,24 +82,83 @@ export async function callEconomyCircuit(
   contractAddress: string,
   circuitId: string,
   args: unknown[],
-  options: { compiledAssetsPath: string },
+  options: EconomyCallOptions,
 ): Promise<{ status: string; txId: string; submitted: boolean }> {
-  const { compiledContract } = await requireCompiledEconomy(options.compiledAssetsPath);
-  const { submitCallTx } = await import("@midnight-ntwrk/midnight-js-contracts");
-  const finalized = await submitCallTx(providers as never, {
-    compiledContract,
+  const { compiledContract } = await compiledEconomy(options);
+  return submitNamedCircuit({
+    providers,
     contractAddress,
+    compiledContract,
     privateStateId: ECONOMY_PRIVATE_STATE_ID,
     circuitId,
     args,
-  } as never);
-  const status = readTxStatus(finalized);
-  if (!status) throw new Error("submit failed");
-  return {
-    status,
-    txId: readTxId(finalized),
-    submitted: status === MIDNIGHT_SUCCESS_STATUS,
-  };
+  });
+}
+
+export async function writeEconomyPrivateState(
+  providers: { privateStateProvider?: PrivateStateStore },
+  contractAddress: string,
+  privateState: EconomyPreviewPrivateState | VeliosEconomyPrivateState,
+): Promise<void> {
+  await writeCircuitPrivateState(providers, contractAddress, ECONOMY_PRIVATE_STATE_ID, privateState);
+}
+
+export async function readEconomyLedger(
+  providers: { publicDataProvider?: { queryContractState: (address: string) => Promise<unknown> } },
+  contractAddress: string,
+): Promise<EconomyLedgerView> {
+  const loaded = await loadCompiledEconomyPreview();
+  if (!loaded) {
+    throw new Error("environment missing: economy-preview compact artifacts not compiled");
+  }
+  if (!providers.publicDataProvider) {
+    throw new Error("environment missing: public data provider");
+  }
+  const contractState = await Promise.race([
+    providers.publicDataProvider.queryContractState(contractAddress),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("indexer read timed out")), 20_000);
+    }),
+  ]);
+  if (!contractState) {
+    throw new Error("contract not found on indexer");
+  }
+  const ledgerFn = loaded.ledger as (state: unknown) => CompactEconomyLedger;
+  return projectEconomyLedger(ledgerFn(ledgerStateValue(contractState)), contractAddress);
+}
+
+export async function confirmEconomyField(input: {
+  status: string;
+  txId: string;
+  contractAddress: string;
+  readLedger: () => Promise<EconomyLedgerView>;
+  present: (view: EconomyLedgerView) => boolean;
+  timeoutMs?: number;
+  pollMs?: number;
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+}): Promise<{ kind: "confirmed" | "stale" | "failed"; txId: string; view?: EconomyLedgerView }> {
+  if (input.status !== MIDNIGHT_SUCCESS_STATUS) {
+    return { kind: "failed", txId: input.txId };
+  }
+  const timeoutMs = input.timeoutMs ?? 30_000;
+  const pollMs = input.pollMs ?? 1_000;
+  const now = input.now ?? Date.now;
+  const sleep = input.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + timeoutMs;
+  let last: EconomyLedgerView | undefined;
+  while (now() <= deadline) {
+    last = await input.readLedger();
+    if (input.contractAddress && last.contractAddress !== input.contractAddress) {
+      return { kind: "failed", txId: input.txId, view: last };
+    }
+    if (input.present(last)) {
+      return { kind: "confirmed", txId: input.txId, view: last };
+    }
+    if (now() + pollMs > deadline) break;
+    await sleep(pollMs);
+  }
+  return { kind: "stale", txId: input.txId, ...(last ? { view: last } : {}) };
 }
 
 export async function confirmEconomySettlement(input: {
@@ -158,22 +166,20 @@ export async function confirmEconomySettlement(input: {
   txId: string;
   actionId: string;
   contractAddress: string;
-  readLedger: LedgerReader;
+  readLedger: () => Promise<EconomyLedgerView>;
   timeoutMs?: number;
   pollMs?: number;
 }): Promise<{ kind: "settled" | "stale" | "failed"; txId: string }> {
-  if (input.status !== MIDNIGHT_SUCCESS_STATUS) {
-    return { kind: "failed", txId: input.txId };
-  }
-  const confirmed = await waitForPublicAction({
-    actionId: asHex32(input.actionId),
-    ...(input.contractAddress ? { contractAddress: input.contractAddress } : {}),
-    timeoutMs: input.timeoutMs ?? 30_000,
-    pollMs: input.pollMs ?? 1_000,
-    readLedger: input.readLedger,
-  });
-  return {
-    kind: confirmed.status === "confirmed" ? "settled" : "stale",
+  const confirmed = await confirmEconomyField({
+    status: input.status,
     txId: input.txId,
-  };
+    contractAddress: input.contractAddress,
+    readLedger: input.readLedger,
+    ...(input.timeoutMs !== undefined ? { timeoutMs: input.timeoutMs } : {}),
+    ...(input.pollMs !== undefined ? { pollMs: input.pollMs } : {}),
+    present: (view) => view.settlements.some((row) => row.actionId === asHex32(input.actionId)),
+  });
+  if (confirmed.kind === "confirmed") return { kind: "settled", txId: input.txId };
+  if (confirmed.kind === "failed") return { kind: "failed", txId: input.txId };
+  return { kind: "stale", txId: input.txId };
 }

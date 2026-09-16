@@ -16,6 +16,8 @@ const persistAllowlist = [
   path.join(root, "apps/web/src/lib/operator-state.ts"),
   path.join(root, "apps/web/src/lib/operator-vault.ts"),
   path.join(root, "apps/web/src/lib/workspace.ts"),
+  path.join(root, "apps/web/src/lib/wave2-contracts.ts"),
+  path.join(root, "apps/web/src/lib/wave2-vault.ts"),
 ];
 
 function walk(dir: string, acc: string[] = []): string[] {

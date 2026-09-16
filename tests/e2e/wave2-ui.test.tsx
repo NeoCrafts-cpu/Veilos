@@ -33,4 +33,20 @@ describe("Wave 2 economy UI", () => {
     expect(document.body.textContent).toMatch(/Public observer|observer/i);
     expect(document.body.textContent).not.toMatch(/holderSecret|ballotChoice/);
   });
+
+  it("exposes real credential and treasury circuit actions", () => {
+    const creds = renderAt("/app/credentials");
+    expect(creds.container.textContent).toMatch(/Issue on Midnight|Connect a Midnight wallet|Unlock the operator vault/i);
+    expect(creds.container.textContent).not.toMatch(/AUTHORIZATION RECORDED/);
+    cleanup();
+    const treasury = renderAt("/app/treasury");
+    expect(treasury.container.textContent).toMatch(/Prove authorization|Connect a Midnight wallet|Unlock the operator vault/i);
+    cleanup();
+    const gov = renderAt("/app/governance");
+    expect(gov.container.textContent).toMatch(/Create on Midnight|Deploy on Preview|Connect a Midnight wallet/i);
+    cleanup();
+    const docs = renderAt("/docs");
+    expect(docs.container.textContent).toMatch(/Fail-closed/i);
+    expect(docs.container.textContent).toMatch(/economy-preview\.compact/i);
+  });
 });
