@@ -10,7 +10,7 @@
  * and a contract address is present.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { WebSocket } from "ws";
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
@@ -25,11 +25,14 @@ import {
   zkConfigPath,
 } from "@velios/contracts/node";
 import {
+  agentIdFromLabel,
+  decodePrivateState,
   getNetworkConfig,
   memberIdFromLabel,
   proofServerReachable,
   roleLabelToBytes,
   vendorIdFromRecipient,
+  writeJoinedPrivateState,
   type NetworkConfig,
 } from "@velios/midnight";
 import { callCircuit, deployOrganization } from "@velios/midnight/client";
@@ -49,6 +52,7 @@ import { findRepoRoot } from "./paths.js";
 import { writePrivateStateExport } from "./private-state-export.js";
 import { buildCliProviders } from "./providers.js";
 import { writeGeneratedSeedFile } from "./secure-seed.js";
+import { resolvePrivateStorePassword } from "./private-store-password.js";
 import { loadEnvFile, resolveWalletSecret } from "./secret.js";
 import { MidnightWalletProvider, syncWallet } from "./wallet.js";
 
@@ -56,6 +60,7 @@ import { MidnightWalletProvider, syncWallet } from "./wallet.js";
 
 const DEFAULT_ORG_NAME = "ACME AUTONOMOUS SYSTEMS";
 const DEFAULT_MEMBER_LABEL = "FOUNDING-MEMBER";
+const DEFAULT_AGENT_LABEL = "TREASURY-01";
 const DEFAULT_AGENT_ROLE = "Treasury Operator";
 const DEFAULT_RECIPIENT = "supplier-8271";
 const CREDENTIAL_LIFETIME_SECONDS = 30n * 86_400n;
@@ -162,6 +167,7 @@ export async function runPreviewDeploy(
   }
   const repoRoot = findRepoRoot();
   loadEnvFile(path.join(repoRoot, ".env"));
+  resolvePrivateStorePassword(process.env, "preview-deploy");
 
   const networkName = argv.includes("--preprod") ? "preprod" : "preview";
   const dustOnly = argv.includes("--dust-only");
@@ -206,7 +212,7 @@ export async function runPreviewDeploy(
       // Full deploy waits for strictly-complete progress. DUST-only uses the
       // official WalletFacade waitForSyncedState() so a second run can see
       // already-registered NIGHT without another half-hour merkle catch-up.
-      if (dustOnly || economy) {
+      if (dustOnly || economy || argv.includes("--create-agent")) {
         await Promise.race([
           waitForSyncedState(wallet.wallet),
           new Promise<never>((_, reject) => {
@@ -254,6 +260,30 @@ export async function runPreviewDeploy(
 
     if (dustOnly) {
       return { dustOnly: true };
+    }
+
+    if (argv.includes("--create-agent")) {
+      const deployPath = path.join(repoRoot, "deployment.json");
+      const statePath = path.join(repoRoot, ".private-state", "preview.json");
+      if (!existsSync(deployPath) || !existsSync(statePath)) {
+        throw new Error("createAgent requires gitignored deployment.json and .private-state/preview.json");
+      }
+      const record = JSON.parse(readFileSync(deployPath, "utf8")) as PublicDeployment;
+      const privateState = decodePrivateState(JSON.parse(readFileSync(statePath, "utf8")));
+      const providers = buildCliProviders(wallet, zkConfigPath, config);
+      await writeJoinedPrivateState(providers, record.contractAddress, privateState);
+      const agentLabel = process.env["VELIOS_AGENT_LABEL"]?.trim() || DEFAULT_AGENT_LABEL;
+      const agentId = agentIdFromLabel(agentLabel);
+      const created = await callCircuit(providers, record.contractAddress, "createAgent", [
+        hex32ToBytes(agentId),
+        hex32ToBytes(record.memberId),
+      ]);
+      if (created.status !== MIDNIGHT_SUCCESS_STATUS) {
+        throw new Error("createAgent failed");
+      }
+      console.log(`Agent id: ${agentId}`);
+      console.log(`createAgent: ${created.status}`);
+      return record;
     }
 
     const organizationName = process.env["VELIOS_ORG_NAME"]?.trim() || DEFAULT_ORG_NAME;

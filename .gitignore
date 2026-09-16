@@ -68,3 +68,9 @@ playwright-report/
 blob-report/
 
 # Windows NTFS compact.exe noise is not relevant; keep source as-is
+
+# Local scratch — keep off GitHub
+buildathon-ai-vibe-coding-kit/
+qa/
+wave1-readiness.canvas.tsx
+docs/full_app_audit_prompt_gpt_5_6_sol.md

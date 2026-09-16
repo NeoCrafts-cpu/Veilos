@@ -60,7 +60,7 @@ async function queryLedger<T>(
   const contractState = await Promise.race([
     providers.publicDataProvider.queryContractState(contractAddress),
     new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("indexer read timed out")), 20_000);
+      setTimeout(() => reject(new Error("indexer read timed out")), 60_000);
     }),
   ]);
   if (!contractState) throw new Error("contract not found on indexer");

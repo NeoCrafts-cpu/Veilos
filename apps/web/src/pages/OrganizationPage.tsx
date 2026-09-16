@@ -33,6 +33,7 @@ export function OrganizationPage() {
     operatorMatch,
     vaultStatus,
     published,
+    ledgerError,
     selectedContract,
     selectWorkspace,
     selectEntities,
@@ -69,6 +70,14 @@ export function OrganizationPage() {
           <Button to="/app/preview" variant="secondary">
             Explore public Preview
           </Button>
+        </EmptyState>
+      ) : null}
+
+      {ledgerError ? (
+        <EmptyState title="Indexer unavailable" body="Public organization data could not be read. Retry the official indexer. Slow Preview responses can take up to a minute.">
+          <button type="button" className="btn" disabled={!contractAddress || busy} onClick={() => void refreshLedger()}>
+            {busyAction === "refresh" ? "Refreshing…" : "Retry public data"}
+          </button>
         </EmptyState>
       ) : null}
 
