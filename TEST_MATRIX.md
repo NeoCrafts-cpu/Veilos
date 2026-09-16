@@ -6,9 +6,9 @@ Statuses are limited to PASS, FAIL, BLOCKED, and NOT TESTED. PASS means the list
 | ID | Feature | Scenario | Preconditions | Steps | Expected Result | Actual Result | Status | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | T-001 | Landing | Load production landing page | Network access | Open production root | Product statement and entry actions render | Rendered with accessible heading and links | PASS | Browser snapshot, 2026-09-20 |
-| T-002 | Production routing | Open `/docs` directly | Production deployment | Navigate to URL | Docs page remains at `/docs` | Redirected to landing page | FAIL | Browser URL/read-back |
-| T-003 | Production routing | Open `/app/treasury/authorize` directly | Production deployment | Navigate to URL | Treasury task renders | Redirected to landing page | FAIL | Browser URL/read-back |
-| T-004 | Build identity | Inspect production build marker | Production deployment | Read `meta[name=velios-build]` | Current build id exists | Marker absent; old asset served | FAIL | CDP document inspection |
+| T-002 | Production routing | Open `/docs` directly | Production deployment | GET URL | Docs SPA remains at `/docs` | HTTP 200 at `/docs` (no host redirect); bundle contains `/docs` | PASS | curl 2026-09-21; `index-moiq_Q4J.js` |
+| T-003 | Production routing | Open `/app/treasury/authorize` directly | Production deployment | GET URL | Treasury task route served | HTTP 200 at `/app/treasury/authorize`; bundle contains `treasury/authorize` | PASS | curl 2026-09-21; `index-moiq_Q4J.js` |
+| T-004 | Build identity | Inspect production build marker | Production deployment | Read `meta[name=velios-build]` | Current git build id exists | `velios-build=136c61f2c67d` matches git `136c61f`; asset `index-moiq_Q4J.js` | PASS | curl 2026-09-21 |
 | T-005 | Source routing | Unknown workspace route | Node 22 test runtime | Render `/app/treasry` | Recovery screen, no silent redirect | Recovery screen rendered | PASS | `App.test.tsx` |
 | T-006 | Authorization | Direct review with empty draft | Node 22 test runtime | Render review route | Submission disabled; edit recovery shown | Fail-closed state rendered | PASS | `App.test.tsx` |
 | T-007 | Authorization | Shared draft validation | Node 22 test runtime | Validate invalid and valid inputs | Invalid fields rejected; bigint parsed | 4 validation tests pass | PASS | `validation.test.ts` |

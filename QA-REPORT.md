@@ -22,11 +22,11 @@ Wave 2 write controls require a connected wallet, an unlocked operator vault, a 
 
 ## Live Preview limitation
 
-W2-L2–W2-L7 credential, payment, settlement, companion, and award transactions are not retained in `docs/preview-evidence.md`. Those cases require `VELIOS_LIVE_PREVIEW=1`, a real Preview wallet, and a proof provider. Local replica tests are supplemental only.
+W2-L2–W2-L7 credential, payment, settlement, companion, and award transactions are not retained in `docs/preview-evidence.md`. Those writes are operator-manual (UI + wallet). Local replica tests are supplemental only.
 
-## Production deployment blocker
+## Production deployment
 
-The source build passes, but `https://veilos-web-ten.vercel.app` is currently stale. Direct `/docs` and `/app/treasury/authorize` checks return to the landing page, and the deployed document lacks the local `velios-build=e1ffc61` marker. Redeploy and repeat production browser QA before judge use.
+`https://veilos-web-ten.vercel.app` serves git `136c61f` (`velios-build=136c61f2c67d`). `/docs` and `/app/treasury/authorize` return the SPA. Redeploy again after the current fail-closed wallet/proving hardening is committed.
 
 ## Remaining product limits
 

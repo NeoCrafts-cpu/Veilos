@@ -6,7 +6,7 @@ export function CurrentTaskCard({ task }: { task: CurrentTask }) {
   return (
     <section className="step-panel current-task">
       <WindowChrome />
-      <p className="label">Current task</p>
+      <p className="label">Start here</p>
       <h2>{task.title}</h2>
       <p className="step-panel-body">{task.body}</p>
       <div className="row">

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
+import { DeskStats } from "../../components/DeskStats.js";
 import { FormField } from "../../components/FormField.js";
 import { MaskedValue } from "../../components/MaskedValue.js";
 import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
-import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
+import { Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { useEconomy } from "../../state/economy.js";
@@ -15,12 +16,9 @@ export function AuditorPage() {
     contracts,
     auditor,
     economy,
-    governance,
-    procurement,
     busy,
     lastResult,
     ledgerError,
-    deployAuditor,
     recordDisclosure,
     vault,
     refreshLedgers,
@@ -32,30 +30,29 @@ export function AuditorPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Scoped auditor view"
-        objective="Auditors receive only consented, expiring grants. Claim bodies stay encrypted. The ledger publishes grant id, auditor id, scope commitment, and expiry."
+        compact
+        title="Auditor"
+        objective="Auditors see only the scope they were granted. Claim bodies stay private. Grants expire."
+      />
+      <DeskStats
+        items={[
+          { label: "Payments", value: economy?.actionCount.toString() ?? "0" },
+          { label: "Settled", value: economy?.settlementCount.toString() ?? "0" },
+          { label: "Grants", value: auditor?.disclosureCount.toString() ?? "0" },
+        ]}
+        onRefresh={() => void refreshLedgers()}
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
-      <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta label="auditor-preview" address={contracts.auditor} onDeploy={() => void deployAuditor()} busy={busy} />
-        <article className="card blue">
-          <h2>Public observer</h2>
-          <p>Economy authorizations {economy?.actionCount.toString() ?? "0"}</p>
-          <p>Settlements {economy?.settlementCount.toString() ?? "0"}</p>
-          <p>Finalized proposals {(governance?.proposals ?? []).filter((row) => row.status === "finalized").length}</p>
-          <p>Awarded lots {(procurement?.lots ?? []).filter((row) => row.status === "awarded").length}</p>
-          <p>Disclosure grants {auditor?.disclosureCount.toString() ?? "0"}</p>
-          <Button type="button" variant="secondary" onClick={() => void refreshLedgers()}>
-            Refresh indexer
-          </Button>
-        </article>
-      </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.auditor} ownerSecret={vault.auditorOwnerSecret}>
+      <Wave2Gate
+        contractAddress={contracts.auditor}
+        ownerSecret={vault.auditorOwnerSecret}
+        idleTitle="Inspect auditor grants"
+        idleBody="Fill the form. Writes wait until auditor grants are live for this organization."
+      >
         <form
           id="task-grants"
-          className="form card"
-          style={{ marginTop: 24 }}
+          className="form card desk-form"
           onSubmit={(event) => {
             event.preventDefault();
             void recordDisclosure({ auditorLabel: label.trim() || "scoped", expiresHours: Number(hours) || 24 });

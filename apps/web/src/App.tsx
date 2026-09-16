@@ -65,7 +65,7 @@ export function App() {
         <Route path="actions/:actionId/proof" element={<RedirectLegacyProof />} />
         <Route path="actions/:actionId/privacy" element={<PrivacyPage />} />
         <Route path="actions/:actionId" element={<ResultPage />} />
-        <Route path="org/agents" element={<OrganizationPage />} />
+        <Route path="org/agents" element={<AgentPage />} />
         <Route path="org/agent/new" element={<AgentPolicyPage />} />
         <Route path="org/agent/new/review" element={<AgentPolicyPage />} />
         <Route path="org/agent/new/success" element={<AgentPolicyPage />} />

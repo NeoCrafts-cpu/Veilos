@@ -9,7 +9,7 @@ import { useEconomy } from "../state/economy.js";
 import { useSession } from "../state/session.js";
 
 export function PrivacyPage() {
-  useDocumentTitle("Privacy inspector");
+  useDocumentTitle("What's public");
   const { actionId } = useParams();
   const { publicStore } = useSession();
   const { economy, governance, procurement, auditor, contracts } = useEconomy();
@@ -22,8 +22,8 @@ export function PrivacyPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Privacy inspector"
-        objective="What Midnight publishes versus what stays in witnesses. Private slots are hidden on purpose."
+        title="What's public"
+        objective="What Midnight publishes versus what stays private."
       />
       <div className="privacy-grid" style={{ marginTop: 24 }}>
         <article className="card">
@@ -42,24 +42,27 @@ export function PrivacyPage() {
         </article>
         <article className="card blue">
           <h2>Public output</h2>
-          <PublicId label="Wave 1 action" value={selected?.actionId ?? actionId} />
+          <PublicId label="Payment" value={selected?.actionId ?? actionId} />
           <p>Result {authorized && selected ? "VERIFIED" : selected ? selected.result.toUpperCase() : "NONE"}</p>
-          <PublicId label="Wave 1 contract" value={publicStore.contractAddress} />
-          <PublicId label="economy-preview" value={contracts.economy} />
-          <PublicId label="governance-preview" value={contracts.governance} />
-          <PublicId label="procurement-preview" value={contracts.procurement} />
-          <PublicId label="auditor-preview" value={contracts.auditor} />
+          <details className="ledger-details">
+            <summary>Technical details</summary>
+            <PublicId label="Organization" value={publicStore.contractAddress} />
+            <PublicId label="Treasury" value={contracts.economy} />
+            <PublicId label="Votes" value={contracts.governance} />
+            <PublicId label="Bids" value={contracts.procurement} />
+            <PublicId label="Auditor" value={contracts.auditor} />
+          </details>
           <p>
             Timestamp{" "}
             {selected ? formatWindow(selected.periodStart, selected.periodEnd) : "—"}
           </p>
-          <p className="mono">Wave 1 actions {publicStore.actions.length}</p>
-          <p className="mono">Treasury authorizations {economy?.actionCount.toString() ?? "0"}</p>
-          <p className="mono">Settlements {economy?.settlementCount.toString() ?? "0"}</p>
-          <p className="mono">Credential commitments {economy?.credentialCount.toString() ?? "0"}</p>
-          <p className="mono">Ballot commitments {governance?.ballotCommitments.length ?? 0}</p>
-          <p className="mono">Bid commitments {procurement?.bidCommitments.length ?? 0}</p>
-          <p className="mono">Disclosure grants {auditor?.disclosureCount.toString() ?? "0"}</p>
+          <p>Payments {publicStore.actions.length}</p>
+          <p>Treasury authorizations {economy?.actionCount.toString() ?? "0"}</p>
+          <p>Settlements {economy?.settlementCount.toString() ?? "0"}</p>
+          <p>Credentials {economy?.credentialCount.toString() ?? "0"}</p>
+          <p>Ballots {governance?.ballotCommitments.length ?? 0}</p>
+          <p>Bids {procurement?.bidCommitments.length ?? 0}</p>
+          <p>Auditor grants {auditor?.disclosureCount.toString() ?? "0"}</p>
           <p>Proof {authorized && selected ? "VALID" : "NOT CONFIRMED"}</p>
         </article>
       </div>
@@ -80,25 +83,23 @@ export function PrivacyPage() {
         </div>
         <p>
           {actor === "observer"
-            ? "Public ids, commitments, counters, unshielded settlement amount/recipient, and finalized yes/no only."
+            ? "Public ids, commitments, counters, settled amount/recipient, and closed vote totals only."
             : actor === "operator"
               ? "Operator vault can open commitments in this tab. Limits stay masked here."
               : actor === "holder"
                 ? "Credential body stays in the encrypted holder store."
                 : actor === "procurement"
                   ? "Bid openings are available only to the authorized procurement operator."
-                  : "Auditor claims require a scoped, expiring grant recorded on auditor-preview."}
+                  : "Auditor claims require a scoped, expiring grant."}
         </p>
       </article>
       <article className="card" style={{ marginTop: 24 }}>
         <h2>Private → proof → public</h2>
         <p>
-          Compact witnesses are untrusted. Limits and vendor ids are hashed into ledger commitments before any assert.
-          Failed proofs do not write a public reject row and do not print the private limit.
+          Private inputs are proved against public commitments. Failed proofs write nothing and do not reveal the private budget.
         </p>
         <p>
-          Unshielded NIGHT settlement publishes amount and recipient by design. Ballot choices and sealed bids never
-          appear as integers on the indexer.
+          Settlement publishes amount and recipient on purpose. Vote choices and sealed bids never appear as numbers on the public record.
         </p>
       </article>
     </div>

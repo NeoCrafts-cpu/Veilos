@@ -1,116 +1,31 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "../components/Button.js";
-import { FormField } from "../components/FormField.js";
-import { JourneyLayout } from "../components/JourneyLayout.js";
-import { RecoveryPanel } from "../components/RecoveryPanel.js";
+import { HowItWorks } from "../components/HowItWorks.js";
+import { MaskedValue } from "../components/MaskedValue.js";
+import { PaymentRequestForm } from "../components/PaymentRequestForm.js";
+import { PageHeader } from "../components/PageHeader.js";
+import { LIVE_AGENT_NAME } from "../lib/org-display.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
-import { localRefuseCopy } from "../lib/result-copy.js";
-import { validateAuthorizationDraft } from "../lib/validation.js";
-import { useSession } from "../state/session.js";
-import { AUTH_STEPS } from "./setup/steps.js";
 
 export function ActionPage() {
-  useDocumentTitle("Authorize request");
-  const navigate = useNavigate();
-  const { authDraft, setAuthDraft, previewPayment, publicStore, operatorMatch, wallet, canOperate, selectedAgentId } = useSession();
-  const [errors, setErrors] = useState<{ recipient?: string; amount?: string; reason?: string }>({});
-  const [localRefuse, setLocalRefuse] = useState<string>();
-  const agent = publicStore.agents.find((item) => item.agentId === selectedAgentId)
-    ?? (publicStore.agents.length === 1 ? publicStore.agents[0] : undefined);
-  const blocked =
-    !wallet || !agent || operatorMatch === "mismatch" || operatorMatch === "stale_spend" || !canOperate;
+  useDocumentTitle("Request a payment");
 
   return (
-    <JourneyLayout
-      title="Authorize a payment request"
-      objective="Veilos authorizes this request. It does not transfer funds."
-      steps={AUTH_STEPS}
-      current={0}
-      actions={
-        <Button
-          disabled={blocked}
-          onClick={() => {
-            const validation = validateAuthorizationDraft(authDraft);
-            setErrors({
-              ...(validation.recipient ? { recipient: validation.recipient } : {}),
-              ...(validation.amount ? { amount: validation.amount } : {}),
-              ...(validation.reason ? { reason: validation.reason } : {}),
-            });
-            if (validation.recipient || validation.amount || validation.reason || validation.parsedAmount === undefined) {
-              return;
-            }
-            const preview = previewPayment({
-              recipient: authDraft.recipient.trim(),
-              amount: validation.parsedAmount,
-            });
-            if (!preview.allowed) {
-              setLocalRefuse(preview.code);
-              return;
-            }
-            setLocalRefuse(undefined);
-            navigate("/app/authorize/review");
-          }}
-        >
-          Review authorization
-        </Button>
-      }
-    >
-      {!agent ? (
-        <RecoveryPanel title="Create an agent first" body="Authorization needs an on-chain agent with a committed private policy.">
-          <Button to="/app/org/agent/new">Configure first agent</Button>
-        </RecoveryPanel>
-      ) : null}
-      {operatorMatch === "mismatch" || operatorMatch === "stale_spend" ? (
-        <RecoveryPanel
-          title="Operator access is not verified for this agent"
-          body="Import the matching backup. Veilos will not generate a proof until the commitments match."
-        >
-          <Button to="/app/org">Restore operator access</Button>
-        </RecoveryPanel>
-      ) : null}
-      {!wallet ? (
-        <RecoveryPanel title="Connect a Midnight wallet" body="The wallet pays DUST for proving. Veilos never asks for a recovery phrase.">
-          <Button to="/app/setup">Check readiness</Button>
-        </RecoveryPanel>
-      ) : null}
-      <form className="form card" onSubmit={(event) => event.preventDefault()}>
-        <p className="muted">
-          {agent ? `Agent ${agent.agentId.slice(0, 8)}… is the committed context for this request.` : "Agent context is not on the indexer yet."}
-        </p>
-        <FormField
-          id="recipient"
-          label="Recipient"
-          value={authDraft.recipient}
-          onChange={(event) => setAuthDraft({ ...authDraft, recipient: event.target.value })}
-          required
-          error={errors.recipient}
-        />
-        <FormField
-          id="amount"
-          label="Amount"
-          inputMode="numeric"
-          value={authDraft.amount}
-          onChange={(event) => setAuthDraft({ ...authDraft, amount: event.target.value })}
-          hint="Whole-number policy units. No funds are transferred."
-          required
-          error={errors.amount}
-        />
-        <FormField
-          id="reason"
-          label="Reason"
-          value={authDraft.reason}
-          onChange={(event) => setAuthDraft({ ...authDraft, reason: event.target.value })}
-          hint="Stays on this device. Never written to the ledger."
-          required
-          error={errors.reason}
-        />
-        {localRefuse ? (
-          <RecoveryPanel title="Not authorized" body={localRefuseCopy(localRefuse)}>
-            <p className="muted">Midnight was not called.</p>
-          </RecoveryPanel>
-        ) : null}
-      </form>
-    </JourneyLayout>
+    <div className="page">
+      <PageHeader
+        title="Request a payment"
+        objective="Ask TREASURY-01 to pay a vendor. The budget stays private. This does not transfer funds until you settle."
+      />
+      <HowItWorks />
+      <div className="desk-split">
+        <PaymentRequestForm idPrefix="pay" />
+        <article className="card">
+          <p className="label">{LIVE_AGENT_NAME}</p>
+          <h2>Stays private</h2>
+          <MaskedValue label="Amount" />
+          <MaskedValue label="Vendor" />
+          <MaskedValue label="Reason" />
+          <MaskedValue label="Policy limits" />
+        </article>
+      </div>
+    </div>
   );
 }

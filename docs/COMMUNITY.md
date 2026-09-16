@@ -31,7 +31,7 @@ Compact compiles. That is the technical gate.
 Veilos is a privacy-native OS for autonomous orgs. Compact commits the policy; witnesses never hit the public ledger; the Privacy Inspector shows the split.
 
 Live UI: https://veilos-web-ten.vercel.app
-Contracts (Preview): authorization `0787a191…8e02`, economy-preview `0b4a8d7e…7c8f`
+Contracts (Preview): authorization `4b31d10b…e64b`, economy-preview `bb910a79…e4df`
 Repo: https://github.com/NeoCrafts-cpu/Veilos
 
 Happy to walk judges through `pnpm test` and the inspector.

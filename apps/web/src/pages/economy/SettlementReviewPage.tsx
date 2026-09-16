@@ -19,6 +19,7 @@ export function SettlementReviewPage() {
     settlePayment,
     busy,
     lastResult,
+    publishedEconomy,
   } = useEconomy();
   const actionId =
     selection.settlementActionId ??
@@ -31,8 +32,9 @@ export function SettlementReviewPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Unshielded settlement review"
-        objective="Amount and recipient will be public. Authorization is not payment. Compact sendUnshielded runs only after leakage is acknowledged."
+        compact
+        title="Settle a payment"
+        objective="Amount and recipient will be public. Authorization is not payment. Settlement only runs after you acknowledge that."
       />
       <Wave2CallBanner result={lastResult} />
       <div className="privacy-grid" style={{ marginTop: 24 }}>
@@ -62,7 +64,11 @@ export function SettlementReviewPage() {
           Cancel
         </Link>
       </div>
-      <Wave2Gate contractAddress={contracts.economy} ownerSecret={vault.economyOwnerSecret}>
+      <Wave2Gate
+        contractAddress={contracts.economy ?? publishedEconomy?.contractAddress}
+        ownerSecret={vault.economyOwnerSecret}
+        publishedAddress={publishedEconomy?.contractAddress}
+      >
         {alreadySettled ? (
           <p>This action already has a settlement row on the indexer.</p>
         ) : (

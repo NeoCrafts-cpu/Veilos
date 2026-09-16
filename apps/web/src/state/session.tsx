@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -71,6 +72,8 @@ import {
   writeWalletReconnectHint,
 } from "../lib/wallet-session.js";
 import { readWorkspaceSelection, writeWorkspaceSelection } from "../lib/workspace.js";
+import { beginWalletWork, endWalletWork, shouldSkipWalletSessionCheck } from "../lib/wallet-work-lock.js";
+import { shouldInvalidateWalletSessionAfterErrors } from "@velios/midnight/wallet-session-guard";
 
 const AUTO_LOCK_MS = 15 * 60 * 1000;
 
@@ -286,8 +289,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     (import.meta as { env?: { VITE_VELIOS_NETWORK?: string } }).env?.VITE_VELIOS_NETWORK ?? "preview";
   const network = useMemo(() => getNetworkConfig(networkName), [networkName]);
   const published = useMemo(() => publishedDeploymentFor(network.networkId), [network.networkId]);
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("unset");
-  const [selectedContract, setSelectedContract] = useState<string | undefined>();
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("preview");
+  const [selectedContract, setSelectedContract] = useState<string | undefined>(
+    () => publishedDeploymentFor(networkName)?.contractAddress,
+  );
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>();
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
   const [wallet, setWallet] = useState<BrowserWalletSnapshot | null>(null);
@@ -300,7 +305,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [networkLive, setNetworkLive] = useState<boolean | null>(null);
   const [privateState, setPrivateState] = useState<VeliosPrivateState | null>(isVitestRuntime() ? generatePrivateState() : null);
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>(isVitestRuntime() ? "unlocked" : "missing");
-  const [publicStore, setPublicStore] = useState<PublicStore>(() => emptyStore("Organization"));
+  const [publicStore, setPublicStore] = useState<PublicStore>(() =>
+    emptyStore(publishedDeploymentFor(networkName)?.organizationName ?? "Organization"),
+  );
   const [operations, setOperations] = useState<Record<string, ActionOperation>>({});
   const [lastIntent, setLastIntent] = useState<PaymentIntent | null>(null);
   const [lastWindow, setLastWindow] = useState<AuthorizationWindow | null>(null);
@@ -327,6 +334,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   privateStateRef.current = privateState;
   journalRef.current = journal;
 
+  const assertSubmitReady = useCallback(async () => {
+    const { browserProvingReady, LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
+    const walletConfig = walletApi ? await walletApi.getConfiguration() : undefined;
+    if (!(await browserProvingReady(provingSource, walletConfig?.proverServerUri, network))) {
+      throw new Error(LOCAL_PROOF_MISSING);
+    }
+    if (!walletApi) {
+      throw new Error("Connect a Midnight wallet first.");
+    }
+    const dust = await walletApi.getDustBalance();
+    setDustReady(dust.balance > 0n);
+    if (dust.balance <= 0n) throw new Error("Wallet has no spendable DUST yet.");
+  }, [network, provingSource, walletApi]);
+
   const activeContract =
     selectedContract ??
     (workspaceMode === "preview" ? published?.contractAddress : undefined) ??
@@ -352,14 +373,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     const stored = readWorkspaceSelection();
-    if (stored && stored.networkId === network.networkId) {
+    if (stored && stored.networkId === network.networkId && stored.mode !== "unset") {
       setWorkspaceMode(stored.mode);
       if (stored.contractAddress) setSelectedContract(stored.contractAddress);
       if (stored.selectedMemberId) setSelectedMemberId(stored.selectedMemberId);
       if (stored.selectedAgentId) setSelectedAgentId(stored.selectedAgentId);
+    } else if (published) {
+      setWorkspaceMode("preview");
+      setSelectedContract(published.contractAddress);
+      setPublicStore(emptyStore(published.organizationName));
     }
     workspaceHydrated.current = true;
-  }, [network.networkId]);
+  }, [network.networkId, published]);
 
   useEffect(() => {
     if (isVitestRuntime() || !workspaceHydrated.current) return;
@@ -565,6 +590,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const verifyWalletSession = async () => {
       if (checking) return;
+      if (paymentInFlightRef.current || shouldSkipWalletSessionCheck()) return;
       checking = true;
       try {
         const [status, configuration, address] = await Promise.all([
@@ -592,8 +618,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         if (cancelled) return;
+        if (paymentInFlightRef.current || shouldSkipWalletSessionCheck()) return;
         consecutiveErrors += 1;
-        if (consecutiveErrors >= 2) {
+        if (
+          shouldInvalidateWalletSessionAfterErrors({
+            consecutiveErrors,
+            transactionInFlight: paymentInFlightRef.current || shouldSkipWalletSessionCheck(),
+          })
+        ) {
           invalidateWalletSession("The wallet connection became unavailable. Operator access was locked; reconnect to continue.");
         }
       } finally {
@@ -793,6 +825,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       connectWallet: async () => {
         setWalletError(null);
         setBusyAction("connect");
+        beginWalletWork();
         try {
           const { snapshot, api } = await connectBrowserWallet(network);
           const { buildBrowserProviders } = await import("@velios/midnight/browser-providers");
@@ -825,6 +858,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setNetworkLive(null);
           setWalletError(publicErrorMessage(error, "wallet connect failed"));
         } finally {
+          endWalletWork();
           setBusyAction((current) => (current === "connect" ? "idle" : current));
         }
       },
@@ -990,17 +1024,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setBusyAction("deploy");
         setWalletError(null);
         setPublicStore((prev) => ({ ...prev, organizationName: name, ledgerSync: "pending" }));
+        beginWalletWork();
         try {
-          const { browserProvingReady, LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
-          const walletConfig = walletApi ? await walletApi.getConfiguration() : undefined;
-          if (!(await browserProvingReady(provingSource, walletConfig?.proverServerUri, network))) {
-            throw new Error(LOCAL_PROOF_MISSING);
-          }
-          if (walletApi) {
-            const dust = await walletApi.getDustBalance();
-            setDustReady(dust.balance > 0n);
-            if (dust.balance <= 0n) throw new Error("Wallet has no spendable DUST yet.");
-          }
+          await assertSubmitReady();
           const { callCircuit, deployOrganization } = await import("@velios/midnight/client");
           const { hex32ToBytes } = await import("@velios/shared-types");
           const deployed = await deployOrganization(providers, name, privateState);
@@ -1026,6 +1052,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setWalletError(publicErrorMessage(error, "deploy failed"));
           return false;
         } finally {
+          endWalletWork();
           setBusy(false);
           setBusyAction("idle");
         }
@@ -1060,17 +1087,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setBusy(true);
         setBusyAction("createAgent");
         setWalletError(null);
+        beginWalletWork();
         try {
-          const { browserProvingReady, LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
-          const walletConfig = walletApi ? await walletApi.getConfiguration() : undefined;
-          if (!(await browserProvingReady(provingSource, walletConfig?.proverServerUri, network))) {
-            throw new Error(LOCAL_PROOF_MISSING);
-          }
-          if (walletApi) {
-            const dust = await walletApi.getDustBalance();
-            setDustReady(dust.balance > 0n);
-            if (dust.balance <= 0n) throw new Error("Wallet has no spendable DUST yet.");
-          }
+          await assertSubmitReady();
           const { callCircuit } = await import("@velios/midnight/client");
           const { hex32ToBytes } = await import("@velios/shared-types");
           await primePrivateState(providers, contractAddress, state);
@@ -1092,6 +1111,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setWalletError(publicErrorMessage(error, "createAgent failed"));
           return false;
         } finally {
+          endWalletWork();
           setBusy(false);
           setBusyAction("idle");
         }
@@ -1112,7 +1132,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setBusy(true);
         setBusyAction("policy");
         setWalletError(null);
+        beginWalletWork();
         try {
+          await assertSubmitReady();
           const { callCircuit } = await import("@velios/midnight/client");
           const { hex32ToBytes } = await import("@velios/shared-types");
           await primePrivateState(providers, contractAddress, next);
@@ -1137,6 +1159,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setWalletError(publicErrorMessage(error, "setAgentPolicy failed"));
           return false;
         } finally {
+          endWalletWork();
           setBusy(false);
           setBusyAction("idle");
         }
@@ -1189,6 +1212,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         paymentInFlightRef.current = true;
         setBusy(true);
         setBusyAction("payment");
+        beginWalletWork();
         void (async () => {
           const generation = generationRef.current;
           const stillOpen = () => generationRef.current === generation && Boolean(passphraseRef.current);
@@ -1197,6 +1221,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             setOperations((prev) => upsertOperation(prev, { ...operation, ...prev[intent.actionId], ...patch }));
           };
           try {
+            await assertSubmitReady();
             const { authorizePayment } = await import("@velios/midnight/client");
             const { authorizationWindowFromLedger, fetchIndexerNowSeconds, resolveIndexerHttpUrl } =
               await import("@velios/midnight");
@@ -1335,6 +1360,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             });
           } finally {
             paymentInFlightRef.current = false;
+            endWalletWork();
             if (stillOpen()) {
               setBusy(false);
               setBusyAction("idle");
@@ -1373,6 +1399,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     busyAction,
     dustReady,
     walletApi,
+    provingSource,
+    assertSubmitReady,
   ]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

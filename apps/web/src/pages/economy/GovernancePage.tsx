@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
+import { DeskStats } from "../../components/DeskStats.js";
 import { FormField } from "../../components/FormField.js";
 import { MaskedValue } from "../../components/MaskedValue.js";
 import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
-import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
+import { Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { useEconomy } from "../../state/economy.js";
@@ -18,7 +19,6 @@ export function GovernancePage() {
     busy,
     lastResult,
     ledgerError,
-    deployGovernance,
     registerVoter,
     createProposal,
     castBallot,
@@ -34,39 +34,29 @@ export function GovernancePage() {
   return (
     <div className="page">
       <PageHeader
-        title="Private ballots"
-        objective="A vote writes a ballot commitment and a proposal-scoped nullifier. Individual yes/no values are not incremented on the ledger."
+        compact
+        title="Votes"
+        objective="Eligible members vote privately. Individual yes/no choices stay hidden. Only the closed proposal is public."
+      />
+      <DeskStats
+        items={[
+          { label: "Voters", value: governance?.voterCount.toString() ?? "0" },
+          { label: "Proposals", value: governance?.proposalCount.toString() ?? "0" },
+          { label: "Ballots", value: String(governance?.ballotCommitments.length ?? 0) },
+        ]}
+        onRefresh={() => void refreshLedgers()}
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
-      <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta
-          label="governance-preview"
-          address={contracts.governance}
-          onDeploy={() => void deployGovernance()}
-          busy={busy}
-        />
-        <article className="card blue">
-          <h2>Public outcome</h2>
-          <p>Voters {governance?.voterCount.toString() ?? "0"}</p>
-          <p>Proposals {governance?.proposalCount.toString() ?? "0"}</p>
-          <p>Ballot commitments {governance?.ballotCommitments.length ?? 0}</p>
-          <p className="muted">Finalize only closes the proposal. Compact does not prove a tally. Local openings stay in this vault and are not a public yes/no proof.</p>
-          <Button type="button" variant="secondary" onClick={() => void refreshLedgers()}>
-            Refresh indexer
-          </Button>
-        </article>
-      </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.governance} ownerSecret={vault.governanceOwnerSecret}>
-        <div id="task-voters" className="row" style={{ marginTop: 24 }}>
-          <Button type="button" loading={busy} onClick={() => void registerVoter()}>
-            Register voter
-          </Button>
-        </div>
+      <Wave2Gate
+        contractAddress={contracts.governance}
+        ownerSecret={vault.governanceOwnerSecret}
+        idleTitle="Inspect votes"
+        idleBody="Fill the form. Writes wait until voting is live for this organization."
+      >
         <form
           id="task-proposals"
-          className="form card"
-          style={{ marginTop: 24 }}
+          className="form card desk-form"
           onSubmit={(event) => {
             event.preventDefault();
             void createProposal({ durationSeconds: Number(duration) || 300 });
@@ -81,9 +71,14 @@ export function GovernancePage() {
             onChange={(event) => setDuration(event.target.value)}
             hint="Compact refuses ballots outside kernel.blockTimeGreaterThan(start/end)."
           />
-          <Button loading={busy} loadingLabel="Proving createProposal">
-            Create on Midnight
-          </Button>
+          <div className="row" id="task-voters" style={{ marginTop: 12 }}>
+            <Button loading={busy} loadingLabel="Proving createProposal">
+              Create on Midnight
+            </Button>
+            <Button type="button" variant="secondary" loading={busy} onClick={() => void registerVoter()}>
+              Register voter
+            </Button>
+          </div>
         </form>
         <form
           id="task-ballots"
@@ -143,7 +138,8 @@ export function GovernancePage() {
           </div>
         </form>
         <article className="card" style={{ marginTop: 24 }}>
-          <h2>Proposals on indexer</h2>
+          <h2>Proposals</h2>
+          <p className="muted">Open a vote, cast a private ballot, then close it. Individual yes/no stays hidden.</p>
           {(governance?.proposals ?? []).map((row) => (
             <div key={row.proposalId} className="row">
               <PublicId label="Proposal" value={row.proposalId} />

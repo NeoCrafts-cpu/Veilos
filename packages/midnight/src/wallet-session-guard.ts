@@ -6,6 +6,17 @@ export type WalletSessionReader = Pick<
   "getConnectionStatus" | "getConfiguration" | "getShieldedAddresses"
 >;
 
+/** After a prove/submit finishes, require a longer error window than one 10s timeout. */
+export const WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE = 4;
+
+export function shouldInvalidateWalletSessionAfterErrors(input: {
+  consecutiveErrors: number;
+  transactionInFlight: boolean;
+}): boolean {
+  if (input.transactionInFlight) return false;
+  return input.consecutiveErrors >= WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE;
+}
+
 /**
  * Revalidates the connector immediately before a wallet-dependent transaction
  * step. Proof generation can be long-running, so connection-time checks alone

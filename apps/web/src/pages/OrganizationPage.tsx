@@ -4,7 +4,6 @@ import { Button } from "../components/Button.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { FormField } from "../components/FormField.js";
 import { PageHeader } from "../components/PageHeader.js";
-import { PublicId } from "../components/PublicId.js";
 import { RecoveryPanel } from "../components/RecoveryPanel.js";
 import { StatusChip } from "../components/StatusChip.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
@@ -12,6 +11,8 @@ import { useTaskSection } from "../hooks/useTaskSection.js";
 import { veliosBuildId, veliosBuiltAt } from "../lib/build-info.js";
 import { validateOperatorPassphrase } from "../lib/passphrase.js";
 import { selectedAgent, selectedMember } from "../lib/session-entities.js";
+import { TreasuryOperatorImport } from "../components/TreasuryOperatorImport.js";
+import { useEconomy } from "../state/economy.js";
 import { useSession } from "../state/session.js";
 
 export function OrganizationPage() {
@@ -20,14 +21,12 @@ export function OrganizationPage() {
   const { contractAddress: routeContract } = useParams();
   const {
     publicStore,
-    joinPublished,
     refreshLedger,
     importOperatorState,
     exportOperatorState,
     unlockVault,
     lockVault,
     createVault,
-    wallet,
     busy,
     busyAction,
     operatorMatch,
@@ -36,11 +35,11 @@ export function OrganizationPage() {
     ledgerError,
     selectedContract,
     selectWorkspace,
-    selectEntities,
     selectedMemberId,
     selectedAgentId,
     workspaceMode,
   } = useSession();
+  const { vault: treasuryVault } = useEconomy();
   const [passphrase, setPassphrase] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [vaultError, setVaultError] = useState<string>();
@@ -59,17 +58,14 @@ export function OrganizationPage() {
     <div className="page">
       <PageHeader
         title={publicStore.organizationName}
-        objective="Public membership and agent records. Veilos authorizes actions; it does not hold a treasury balance."
+        objective="Who belongs here. Payments happen from Home — not on this page."
       />
       {!contractAddress && workspaceMode !== "preview" ? (
         <EmptyState
           title="No organization selected"
-          body="Create your own organization or inspect the public Preview deployment."
+          body="Open the live organization to see members and agents."
         >
-          <Button to="/app/setup">Create my organization</Button>
-          <Button to="/app/preview" variant="secondary">
-            Explore public Preview
-          </Button>
+          <Button to="/app">Open organization</Button>
         </EmptyState>
       ) : null}
 
@@ -82,7 +78,12 @@ export function OrganizationPage() {
       ) : null}
 
       <section id="task-overview" className="card" style={{ marginTop: 24 }}>
-        <h2>Overview</h2>
+        <h2>How this organization is used</h2>
+        <ol className="use-list">
+          <li>FOUNDING-MEMBER holds organization access.</li>
+          <li>TREASURY-01 requests payments inside a private policy.</li>
+          <li>You authorize from Home. Midnight records only the public result.</li>
+        </ol>
         <div className="grid">
           <article>
             <div className="label">Members</div>
@@ -93,223 +94,237 @@ export function OrganizationPage() {
             <div className="stat">{(org?.agentCount ?? BigInt(publicStore.agents.length)).toString()}</div>
           </article>
           <article>
-            <div className="label">Authorizations</div>
+            <div className="label">Authorized payments</div>
             <div className="stat">{(org?.actionCount ?? BigInt(publicStore.actions.length)).toString()}</div>
           </article>
         </div>
-        <PublicId label="Organization id" value={org?.organizationId ?? published?.organizationId} />
-        <PublicId label="Contract" value={contractAddress ?? published?.contractAddress} />
         <div className="row">
           <button type="button" className="btn ghost" disabled={!contractAddress || busy} onClick={() => void refreshLedger()}>
-            {busyAction === "refresh" ? "Refreshing…" : "Refresh public data"}
+            {busyAction === "refresh" ? "Refreshing…" : "Refresh"}
           </button>
-          {wallet ? (
-            <button type="button" className="btn ghost" disabled={busy} onClick={() => void joinPublished()}>
-              {busyAction === "join" ? "Reconnecting…" : "Reconnect operator session"}
-            </button>
-          ) : null}
+          <Button to="/app/authorize/new">Request a payment</Button>
         </div>
       </section>
 
       <section className="card" style={{ marginTop: 24 }}>
         <h2>Members</h2>
-        {publicStore.members.length === 0 ? (
-          <p>No public members yet.</p>
-        ) : (
-          <ul>
-            {publicStore.members.map((item) => (
-              <li key={item.memberId}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  data-selected={item.memberId === (member?.memberId ?? selectedMemberId)}
-                  onClick={() => selectEntities({ memberId: item.memberId })}
-                >
-                  Select member {item.memberId.slice(0, 8)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="roster">
+          <div className="roster-row" data-selected={Boolean(member) || publicStore.members.length === 1}>
+            <span>FOUNDING-MEMBER</span>
+            <StatusChip tone="ok" label={publicStore.members[0]?.status ?? "active"} />
+          </div>
+        </div>
       </section>
 
       <section id="task-agents" className="card" style={{ marginTop: 24 }}>
-        <h2>Agent and policy</h2>
-        {publicStore.agents.length > 1 ? (
-          <ul>
-            {publicStore.agents.map((item) => (
-              <li key={item.agentId}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  data-selected={item.agentId === (selectedAgentId ?? agent?.agentId)}
-                  onClick={() => selectEntities({ agentId: item.agentId })}
-                >
-                  Select agent {item.agentId.slice(0, 8)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <h2>Agents</h2>
+        <div className="roster">
+          <div className="roster-row" data-selected={Boolean(agent) || publicStore.agents.length === 1}>
+            <span>TREASURY-01</span>
+            <StatusChip tone={agent?.status === "active" ? "ok" : "neutral"} label={agent?.status ?? "syncing"} />
+          </div>
+        </div>
         {agent ? (
           <div className="row">
-            <Button to={`/app/org/${contractAddress}/agent/${agent.agentId}`}>Open agent</Button>
+            <Button to={`/app/org/${contractAddress}/agent/${agent.agentId}`}>Open TREASURY-01</Button>
             <Button to={`/app/org/${contractAddress}/agent/${agent.agentId}/policy`} variant="secondary">
               Update private policy
             </Button>
           </div>
         ) : (
-          <EmptyState title="No agent yet" body="Set a private policy, then create the first agent on Midnight.">
-            <Button to="/app/org/agent/new">Configure first agent</Button>
-          </EmptyState>
+          <p className="muted">The treasury agent is the one that requests payments. Open it once the ledger answers.</p>
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}>
-        <h2>Operator access</h2>
-        <StatusChip
-          tone={operatorMatch === "verified" ? "ok" : operatorMatch === "mismatch" ? "warn" : "neutral"}
-          label={
-            operatorMatch === "verified"
-              ? "Operator access verified for this agent"
-              : operatorMatch === "stale_spend"
-                ? "Spend commitment is stale"
-                : operatorMatch === "mismatch"
-                  ? "This vault does not open the on-chain agent"
-                  : vaultStatus === "unlocked"
-                    ? "Unlocked in this tab"
-                    : vaultStatus === "locked"
-                      ? "Encrypted vault locked"
-                      : vaultStatus === "dev_available"
-                        ? "Development export available"
-                        : "No vault for this organization"
-          }
-        />
-        {operatorMatch === "mismatch" || operatorMatch === "stale_spend" ? (
-          <RecoveryPanel
-            title="Restore the matching backup"
-            body="A proof will not be submitted until owner, role, policy, and spend commitments match."
-          />
-        ) : null}
-        {vaultStatus === "locked" || vaultStatus === "dev_available" ? (
-          <form
-            className="form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setVaultError(undefined);
-              void unlockVault(passphrase).catch(() => {
-                setVaultError("That passphrase did not open this operator vault. Retry or import the matching backup.");
-              });
-            }}
-          >
-            <FormField
-              id="unlock-passphrase"
-              label="Operator passphrase"
-              type="password"
-              autoComplete="current-password"
-              value={passphrase}
-              onChange={(event) => {
-                setPassphrase(event.target.value);
-                setVaultError(undefined);
-              }}
-              hint={
-                vaultStatus === "dev_available"
-                  ? "A local development export exists. Protect it with a passphrase. This is not a wallet recovery phrase."
-                  : "The wallet pays transactions. This passphrase opens the operator vault."
+      {(() => {
+        const needsAccess =
+          operatorMatch === "mismatch" ||
+          operatorMatch === "stale_spend" ||
+          vaultStatus === "locked" ||
+          vaultStatus === "dev_available";
+        const accessBody = (
+          <>
+            <StatusChip
+              tone={operatorMatch === "verified" ? "ok" : operatorMatch === "mismatch" ? "warn" : "neutral"}
+              label={
+                operatorMatch === "verified"
+                  ? "Ready to authorize"
+                  : operatorMatch === "stale_spend"
+                    ? "Access is out of date"
+                    : operatorMatch === "mismatch"
+                      ? "This access does not open the live agent"
+                      : vaultStatus === "unlocked"
+                        ? "Unlocked in this tab"
+                        : vaultStatus === "locked"
+                          ? "Locked"
+                          : vaultStatus === "dev_available"
+                            ? "Access available"
+                            : "View only"
               }
-              error={vaultError}
             />
-            <button type="submit" className="btn">
-              Unlock operator access
-            </button>
-          </form>
-        ) : null}
-        {vaultStatus === "missing" ? (
-          <form
-            className="form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const strength = validateOperatorPassphrase(passphrase);
-              if (strength) {
-                setVaultError(strength);
-                return;
-              }
-              setVaultError(undefined);
-              void createVault(passphrase).catch(() => {
-                setVaultError("The encrypted operator vault could not be created. Retry without leaving this page.");
-              });
-            }}
-          >
-            <FormField
-              id="create-passphrase"
-              label="Create operator passphrase"
-              type="password"
-              autoComplete="new-password"
-              value={passphrase}
-              onChange={(event) => {
-                setPassphrase(event.target.value);
-                setVaultError(undefined);
-              }}
-              hint="Use at least 16 characters with three of: uppercase, lowercase, digits, and symbols. Never enter a wallet recovery phrase."
-              error={vaultError}
-            />
-            <button type="submit" className="btn">
-              Create secure operator vault
-            </button>
-          </form>
-        ) : null}
-        {vaultStatus === "unlocked" ? (
-          <div className="row">
-            <button type="button" className="btn ghost" onClick={() => void exportOperatorState()}>
-              Download encrypted backup
-            </button>
-            <button type="button" className="btn ghost" onClick={lockVault}>
-              Lock operator access
-            </button>
-          </div>
-        ) : null}
-        <form
-          className="form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!importFile) {
-              setImportError("Choose an encrypted operator backup first.");
-              return;
-            }
-            setImportError(undefined);
-            void importOperatorState(importFile, passphrase).catch(() => {
-              setImportError("The backup could not be opened. Check the file, passphrase, network, and organization.");
-            });
-          }}
-        >
-          <FormField
-            id="import-passphrase"
-            label="Import backup passphrase"
-            type="password"
-            value={passphrase}
-            onChange={(event) => {
-              setPassphrase(event.target.value);
-              setImportError(undefined);
-            }}
-            error={importError}
-          />
-          <label htmlFor="import-file">
-            Encrypted operator backup
-            <input
-              id="import-file"
-              type="file"
-              accept="application/json"
-              onChange={(event) => {
-                setImportFile(event.target.files?.[0] ?? null);
+            {operatorMatch === "mismatch" || operatorMatch === "stale_spend" ? (
+              <RecoveryPanel
+                title="Restore matching access"
+                body="A payment will not be submitted until this access opens the live agent."
+              />
+            ) : null}
+            {vaultStatus === "locked" || vaultStatus === "dev_available" ? (
+              <form
+                className="form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setVaultError(undefined);
+                  void unlockVault(passphrase).catch(() => {
+                    setVaultError("That passphrase did not open this operator vault. Retry or import the matching backup.");
+                  });
+                }}
+              >
+                <FormField
+                  id="unlock-passphrase"
+                  label="Operator passphrase"
+                  type="password"
+                  autoComplete="current-password"
+                  value={passphrase}
+                  onChange={(event) => {
+                    setPassphrase(event.target.value);
+                    setVaultError(undefined);
+                  }}
+                  hint={
+                    vaultStatus === "dev_available"
+                      ? "A local development export exists. Protect it with a passphrase. This is not a wallet recovery phrase."
+                      : "The wallet pays transactions. This passphrase opens the operator vault."
+                  }
+                  error={vaultError}
+                />
+                <button type="submit" className="btn">
+                  Unlock organization
+                </button>
+              </form>
+            ) : null}
+            {vaultStatus === "missing" ? (
+              <form
+                className="form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const strength = validateOperatorPassphrase(passphrase);
+                  if (strength) {
+                    setVaultError(strength);
+                    return;
+                  }
+                  setVaultError(undefined);
+                  void createVault(passphrase).catch(() => {
+                    setVaultError("The encrypted operator vault could not be created. Retry without leaving this page.");
+                  });
+                }}
+              >
+                <FormField
+                  id="create-passphrase"
+                  label="Create operator passphrase"
+                  type="password"
+                  autoComplete="new-password"
+                  value={passphrase}
+                  onChange={(event) => {
+                    setPassphrase(event.target.value);
+                    setVaultError(undefined);
+                  }}
+                  hint="Use at least 16 characters with three of: uppercase, lowercase, digits, and symbols. Never enter a wallet recovery phrase."
+                  error={vaultError}
+                />
+                <button type="submit" className="btn">
+                  Create secure operator vault
+                </button>
+              </form>
+            ) : null}
+            {vaultStatus === "unlocked" ? (
+              <div className="row">
+                <button type="button" className="btn ghost" onClick={() => void exportOperatorState()}>
+                  Download encrypted backup
+                </button>
+                <button type="button" className="btn ghost" onClick={lockVault}>
+                  Lock operator access
+                </button>
+              </div>
+            ) : null}
+            <form
+              className="form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!importFile) {
+                  setImportError("Choose an encrypted operator backup first.");
+                  return;
+                }
                 setImportError(undefined);
+                void importOperatorState(importFile, passphrase).catch(() => {
+                  setImportError("The backup could not be opened. Check the file, passphrase, network, and organization.");
+                });
               }}
-            />
-          </label>
-          <button type="submit" className="btn ghost">
-            Import backup
-          </button>
-        </form>
-      </section>
+            >
+              <FormField
+                id="import-passphrase"
+                label="Import backup passphrase"
+                type="password"
+                value={passphrase}
+                onChange={(event) => {
+                  setPassphrase(event.target.value);
+                  setImportError(undefined);
+                }}
+                error={importError}
+              />
+              <label htmlFor="import-file">
+                Encrypted operator backup
+                <input
+                  id="import-file"
+                  type="file"
+                  accept="application/json"
+                  onChange={(event) => {
+                    setImportFile(event.target.files?.[0] ?? null);
+                    setImportError(undefined);
+                  }}
+                />
+              </label>
+              <button type="submit" className="btn ghost">
+                Import backup
+              </button>
+            </form>
+          </>
+        );
+        return needsAccess ? (
+          <section className="card" style={{ marginTop: 24 }}>
+            <h2>Organization access</h2>
+            {accessBody}
+          </section>
+        ) : (
+          <details className="access-details" style={{ marginTop: 24 }}>
+            <summary>Organization access</summary>
+            {accessBody}
+          </details>
+        );
+      })()}
+
+      {(() => {
+        const needsTreasury = vaultStatus === "unlocked" && !treasuryVault.economyOwnerSecret;
+        const treasuryBody = treasuryVault.economyOwnerSecret ? (
+          <StatusChip tone="ok" label="Ready to issue credentials and settle" />
+        ) : vaultStatus !== "unlocked" ? (
+          <p className="muted">Unlock organization access first, then import the treasury operator backup from this machine.</p>
+        ) : (
+          <>
+            <p className="muted">Credentials and settlement use a second backup. This is not a wallet recovery phrase.</p>
+            <TreasuryOperatorImport />
+          </>
+        );
+        return needsTreasury ? (
+          <section className="card" id="treasury-access" style={{ marginTop: 24 }}>
+            <h2>Treasury access</h2>
+            {treasuryBody}
+          </section>
+        ) : (
+          <details className="access-details" id="treasury-access" style={{ marginTop: 24 }}>
+            <summary>Treasury access</summary>
+            {treasuryBody}
+          </details>
+        );
+      })()}
 
       <details className="ledger-details">
         <summary>Technical details</summary>
@@ -329,7 +344,7 @@ export function OrganizationPage() {
         ))}
       </details>
       <p className="footer-note">
-        <Link to="/app/setup">Create another organization</Link>
+        <Link to="/app/privacy">What's public vs private</Link>
       </p>
     </div>
   );

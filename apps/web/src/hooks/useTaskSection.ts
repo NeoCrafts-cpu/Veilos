@@ -8,7 +8,7 @@ export function useTaskSection(basePath: string, fallback: string): string {
 
   useEffect(() => {
     const node = document.getElementById(`task-${task}`);
-    if (!node) return;
+    if (!node || typeof node.scrollIntoView !== "function") return;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     node.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   }, [task]);

@@ -31,4 +31,25 @@ describe("preview live vertical slice", () => {
     const result = await runPreviewDeploy(["--dust-only"]);
     expect(result).toBeTruthy();
   });
+
+  it("reads retained authorizeAction evidence from the official indexer", async () => {
+    if (!process.env["VELIOS_LIVE_PREVIEW"]) {
+      return;
+    }
+    const { existsSync, readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const evidencePath = resolve(process.cwd(), "../../deployment.authorize.json");
+    if (!existsSync(evidencePath)) {
+      return;
+    }
+    const evidence = JSON.parse(readFileSync(evidencePath, "utf8")) as {
+      contractAddress: string;
+      actionId: string;
+    };
+    const view = await readPublicLedger(
+      { publicDataProvider: publicIndexerProvider(PREVIEW_CONFIG) },
+      evidence.contractAddress,
+    );
+    expect(view.actions.some((row) => row.actionId === evidence.actionId && row.result === "authorized")).toBe(true);
+  });
 });

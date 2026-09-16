@@ -1,11 +1,11 @@
 import type { ProofPhase } from "@velios/shared-types";
 
 const PHASES: { id: ProofPhase; label: string }[] = [
-  { id: "preparing", label: "Preparing witnesses" },
-  { id: "awaiting_wallet", label: "Awaiting wallet approval" },
+  { id: "preparing", label: "Preparing" },
+  { id: "awaiting_wallet", label: "Approve in wallet" },
   { id: "proving", label: "Generating proof" },
-  { id: "submitting", label: "Submitting to Midnight" },
-  { id: "indexing", label: "Confirming on the indexer" },
+  { id: "submitting", label: "Sending" },
+  { id: "indexing", label: "Confirming" },
 ];
 
 export function TransactionProgress({

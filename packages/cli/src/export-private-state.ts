@@ -4,6 +4,7 @@
  * Does not print the payload.
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { PRIVATE_STATE_ID, getNetworkConfig } from "@velios/midnight";
@@ -26,7 +27,14 @@ async function main(): Promise<void> {
   });
   const wallet = await MidnightWalletProvider.build(config, secret);
   const providers = buildCliProviders(wallet, zkConfigPath, config);
-  providers.privateStateProvider.setContractAddress(PREVIEW_DEPLOYMENT.contractAddress);
+  const deployPath = path.join(repoRoot, "deployment.json");
+  const contractAddress = existsSync(deployPath)
+    ? (JSON.parse(readFileSync(deployPath, "utf8")) as { contractAddress?: string }).contractAddress
+    : PREVIEW_DEPLOYMENT.contractAddress;
+  if (!contractAddress) {
+    throw new Error("deployment.json is missing a contract address");
+  }
+  providers.privateStateProvider.setContractAddress(contractAddress);
   const stored = await providers.privateStateProvider.get(PRIVATE_STATE_ID);
   if (!stored) {
     throw new Error("private state missing from the official Level store");

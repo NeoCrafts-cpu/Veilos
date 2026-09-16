@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { PREVIEW_ECONOMY_DEPLOYMENT } from "@velios/midnight/published";
 import { contractRole, stripPublishedWriteAddress } from "./wave2-ownership.js";
 
-const published = "0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f";
+const published = PREVIEW_ECONOMY_DEPLOYMENT.contractAddress;
 
 describe("wave2 ownership", () => {
   it("never treats the published economy address as writable without an owner secret", () => {

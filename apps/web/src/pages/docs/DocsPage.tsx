@@ -324,7 +324,7 @@ pnpm test`}</pre>
                 Proving: wallet Proof Station, or Docker image <code>midnightntwrk/proof-server:8.1.0</code> on port
                 6300. Vercel does not host a proof server.
               </li>
-              <li>Wallet: Midnight DApp Connector v4. Connect from Get Started. Never paste a seed into the UI.</li>
+              <li>Wallet: Midnight DApp Connector v4. Connect from Open organization. Never paste a seed into the UI.</li>
               <li>Preview deploy: <code>pnpm deploy:preview</code> and <code>pnpm deploy:preview:economy</code> (seed from local <code>.env</code>, never committed).</li>
               <li>Vercel hosts static UI only. Proofs stay in the wallet or on this computer.</li>
               <li>

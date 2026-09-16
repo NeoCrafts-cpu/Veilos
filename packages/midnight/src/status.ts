@@ -129,6 +129,21 @@ export function explainCaughtError(error: unknown, fallback: string): string {
   return PUBLIC_ERROR_MESSAGES.submit_failed;
 }
 
+export function circuitAssertFromError(error: unknown): string | undefined {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let i = 0; i < 4 && current; i += 1) {
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+    } else {
+      break;
+    }
+  }
+  const message = parts.join(" — ").toLowerCase();
+  return CIRCUIT_ASSERT_MESSAGES.find((needle) => message.includes(needle));
+}
+
 export function outcomeFromCaughtError(error: unknown): AuthorizationOutcome {
   const raw = error instanceof Error ? error.message : "";
   const message = explainCaughtError(error, "failed");

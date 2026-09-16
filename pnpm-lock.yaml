@@ -169,6 +169,12 @@ importers:
       '@velios/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@velios/credentials':
+        specifier: workspace:*
+        version: link:../credentials
+      '@velios/economy':
+        specifier: workspace:*
+        version: link:../economy
       '@velios/midnight':
         specifier: workspace:*
         version: link:../midnight

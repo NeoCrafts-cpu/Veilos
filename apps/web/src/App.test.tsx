@@ -1,7 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import { PREVIEW_DEPLOYMENT } from "@velios/midnight/published";
 import { App } from "./App.js";
 import { EconomyProvider } from "./state/economy.js";
 import { publicSlice, SessionProvider } from "./state/session.js";
@@ -23,28 +22,29 @@ describe("Wave 1 UI", () => {
   it("renders the landing statement and owner/public entry", () => {
     const { container } = renderAt("/");
     expect(screen.getByRole("heading", { name: /Private\.\s*Verifiable\.\s*Autonomous\./i })).toBeTruthy();
-    expect(screen.getAllByText(/Get Started/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Explore public Preview organization/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Open organization/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Request a payment/i).length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/4800|48000|Launch Veilos|Private treasury/i);
+    expect(container.querySelector(".hero-art[aria-hidden='true']")).toBeTruthy();
   });
 
   it("renders the privacy inspector without private integers", () => {
     const { container } = renderAt("/app/privacy");
-    expect(screen.getAllByText(/PRIVACY INSPECTOR/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/What's public/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/private value hidden/i).length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/25000|48000/);
   });
 
-  it("shows the published Preview contract on the public preview screen", () => {
-    renderAt("/app/preview");
+  it("opens the live organization on home", () => {
+    renderAt("/app");
     expect(screen.getAllByText(/ACME AUTONOMOUS SYSTEMS/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(PREVIEW_DEPLOYMENT.contractAddress)).toBeTruthy();
+    expect(screen.getAllByText(/Request a payment/i).length).toBeGreaterThan(0);
   });
 
   it("keeps authorization copy on the request form", () => {
     renderAt("/app/authorize/new");
     expect(screen.getByLabelText(/amount/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /review authorization/i }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: /review request/i }).hasAttribute("disabled")).toBe(true);
     expect(screen.getAllByText(/does not transfer funds/i).length).toBeGreaterThan(0);
   });
 
@@ -71,9 +71,9 @@ describe("Wave 1 UI", () => {
     renderAt("/app");
     expect(screen.getAllByRole("link", { name: /skip to main content/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("navigation", { name: /primary/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: /^readiness$/i })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^docs$/i })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^issue$/i })).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: /request a payment/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /^activity$/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^credentials$/i })).toBeTruthy();
   });
 
   it("P4 public session slice has no policy integers", () => {

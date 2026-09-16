@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
+import { DeskStats } from "../../components/DeskStats.js";
 import { FormField } from "../../components/FormField.js";
 import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
-import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
+import { Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { validatePolicyAmount } from "../../lib/validation.js";
@@ -22,7 +23,6 @@ export function CredentialsPage() {
     lastResult,
     ledgerError,
     publishedEconomy,
-    deployEconomy,
     issueCredential,
     revokeCredential,
     refreshLedgers,
@@ -38,46 +38,29 @@ export function CredentialsPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Organization-issued credentials"
-        objective="Issue a private credential, prove class and expiry in Compact, and revoke by nullifier. The body never hits the ledger."
+        compact
+        title="Credentials"
+        objective="Issue a membership credential. The body stays private. Only a commitment is public."
+      />
+      <DeskStats
+        items={[
+          { label: "Active", value: economy?.credentialCount?.toString() ?? "0" },
+          { label: "Revoked", value: String(economy?.revokedNullifiers.length ?? 0) },
+        ]}
+        onRefresh={() => void refreshLedgers()}
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
-      <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta
-          label="economy-preview"
-          address={contracts.economy}
-          publishedAddress={publishedEconomy?.contractAddress}
-          onDeploy={() => void deployEconomy()}
-          busy={busy}
-        />
-        <article className="card blue">
-          <h2>Public ledger</h2>
-          <p>Credentials {economy?.credentialCount?.toString() ?? "0"}</p>
-          <p>Revoked nullifiers {economy?.revokedNullifiers.length ?? 0}</p>
-          <PublicId label="Admin commitment" value={economy?.adminCommitment} />
-          <Button type="button" variant="secondary" onClick={() => void refreshLedgers()}>
-            Refresh indexer
-          </Button>
-        </article>
-      </div>
-      <article className="card" style={{ marginTop: 24 }}>
-        <h2>Published Preview core</h2>
-        <p>
-          The ACME economy-preview address is public. Admin circuits still require the owner secret from that deploy.
-          If this vault did not deploy it, Compact will refuse issue/revoke/deposit. Deploy your own contract from this
-          tab to operate end-to-end.
-        </p>
-      </article>
       <Wave2CallBanner result={lastResult} />
       <Wave2Gate
-        contractAddress={contracts.economy}
+        contractAddress={contracts.economy ?? publishedEconomy?.contractAddress}
         ownerSecret={vault.economyOwnerSecret}
         publishedAddress={publishedEconomy?.contractAddress}
+        idleTitle="Inspect credentials"
+        idleBody="Fill the form. Writes wait until credentials are live for this organization."
       >
         <form
           id="task-issue"
-          className="form card"
-          style={{ marginTop: 24 }}
+          className="form card desk-form"
           onSubmit={(event) => {
             event.preventDefault();
             const next: Record<string, string> = {};
@@ -117,37 +100,37 @@ export function CredentialsPage() {
           />
           {className === "treasury" ? (
             <>
-              <FormField
-                id="cred-vendor"
-                label="Bound unshielded recipient"
-                value={recipient}
-                onChange={(event) => setRecipient(event.target.value)}
-                hint="Hashed into the credential. authorizePayment can only pay this vendor."
-                error={errors.recipient}
-                required
-              />
-              <FormField
-                id="cred-per-action"
-                label="Private per-action limit"
-                inputMode="numeric"
-                value={perAction}
-                onChange={(event) => setPerAction(event.target.value)}
-                error={errors.perAction}
-                required
-              />
-              <FormField
-                id="cred-daily"
-                label="Private daily cap"
-                inputMode="numeric"
-                value={daily}
-                onChange={(event) => setDaily(event.target.value)}
-                error={errors.daily}
-                required
-              />
+          <FormField
+            id="cred-vendor"
+            label="Vendor address"
+            value={recipient}
+            onChange={(event) => setRecipient(event.target.value)}
+            hint="Private. This credential can only pay this vendor."
+            error={errors.recipient}
+            required
+          />
+          <FormField
+            id="cred-per-action"
+            label="Max per payment (private)"
+            inputMode="numeric"
+            value={perAction}
+            onChange={(event) => setPerAction(event.target.value)}
+            error={errors.perAction}
+            required
+          />
+          <FormField
+            id="cred-daily"
+            label="Daily max (private)"
+            inputMode="numeric"
+            value={daily}
+            onChange={(event) => setDaily(event.target.value)}
+            error={errors.daily}
+            required
+          />
             </>
           ) : null}
-          <Button loading={busy} loadingLabel="Proving issueCredential">
-            Issue on Midnight
+          <Button loading={busy} loadingLabel="Issuing credential">
+            Issue credential
           </Button>
         </form>
         <article id="task-registry" className="card" style={{ marginTop: 24 }}>

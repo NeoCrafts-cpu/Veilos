@@ -24,7 +24,7 @@ This is the **first** AKINDO submission (not a resubmit). Topic on GitHub: **`mi
 | Market / GTM | [docs/BUSINESS.md](docs/BUSINESS.md) |
 | Community posts to publish | [docs/COMMUNITY.md](docs/COMMUNITY.md) |
 | Live UI | https://veilos-web-ten.vercel.app |
-| Preview contracts | authorization `0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02` · economy-preview `0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f` |
+| Preview contracts | authorization `4b31d10bf6aba347cc0f041856488fa07cfe2604db7a4b1d432123c277a9e64b` · economy-preview `bb910a795fe4bea70af422038ce303ce6cee7e1133f32f021380f221a849e4df` |
 
 Ecosystem attribution: MidnightJS 4.1.1 and Docker pins follow [`midnightntwrk/example-hello-world`](https://github.com/midnightntwrk/example-hello-world) (Apache 2.0). See `NOTICE`.
 

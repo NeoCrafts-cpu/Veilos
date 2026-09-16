@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useEconomy } from "../state/economy.js";
 import { Button } from "./Button.js";
 import { FormField } from "./FormField.js";
-import { RecoveryPanel } from "./RecoveryPanel.js";
 
 export function Wave2VaultPanel() {
   const { wave2VaultStatus, vaultReady, createWave2Vault, unlockWave2Vault, busy } = useEconomy();
@@ -11,49 +10,50 @@ export function Wave2VaultPanel() {
   if (vaultReady && wave2VaultStatus === "ready") return null;
   if (wave2VaultStatus === "missing") {
     return (
-      <RecoveryPanel
-        title="Create the Wave 2 vault"
-        body="Credential openings, ballot choices, bid amounts, and contract owner secrets stay in this encrypted vault. Compact still refuses admin circuits without the matching owner secret."
-      >
-        <Button type="button" disabled={busy} onClick={() => void createWave2Vault()}>
-          Create Wave 2 vault
-        </Button>
-      </RecoveryPanel>
+      <div className="gate-banner" role="status">
+        <p>
+          <strong>Create organization records.</strong> Credentials stay encrypted on this device.
+        </p>
+        <div className="gate-banner-actions">
+          <Button type="button" disabled={busy} onClick={() => void createWave2Vault()}>
+            Create records
+          </Button>
+        </div>
+      </div>
     );
   }
   return (
-    <RecoveryPanel
-      title="Unlock the Wave 2 vault"
-      body="This tab could not open the encrypted Wave 2 records with the operator passphrase. Enter the passphrase that sealed those records. Wallet recovery phrases are refused."
-    >
+    <div className="gate-banner" role="status">
+      <p>
+        <strong>Unlock organization records.</strong> Never enter a wallet recovery phrase.
+      </p>
       <form
         className="form"
         onSubmit={(event) => {
           event.preventDefault();
           if (!passphrase) {
-            setError("Enter the passphrase that sealed this vault.");
+            setError("Enter the passphrase that sealed these records.");
             return;
           }
           setError(undefined);
           void unlockWave2Vault(passphrase).catch((caught: unknown) => {
-            setError(caught instanceof Error ? "That passphrase did not open the Wave 2 vault." : "Unlock failed.");
+            setError(caught instanceof Error ? "That passphrase did not open these records." : "Unlock failed.");
           });
         }}
       >
         <FormField
           id="wave2-passphrase"
-          label="Wave 2 vault passphrase"
+          label="Organization passphrase"
           type="password"
           autoComplete="current-password"
           value={passphrase}
           onChange={(event) => setPassphrase(event.target.value)}
           error={error}
-          hint="Never enter a Midnight wallet recovery phrase."
         />
-        <Button type="submit" disabled={busy} loading={busy} loadingLabel="Opening vault">
-          Unlock Wave 2 vault
+        <Button type="submit" disabled={busy} loading={busy} loadingLabel="Opening records">
+          Unlock records
         </Button>
       </form>
-    </RecoveryPanel>
+    </div>
   );
 }

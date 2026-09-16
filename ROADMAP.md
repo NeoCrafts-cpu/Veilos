@@ -15,7 +15,7 @@ Live on Midnight Preview (`authorization.compact`):
 - official Preview indexer read-back
 - Privacy Inspector
 
-Known gap: Preview `authorizeAction` indexer evidence is not retained yet.
+Known gap: Preview `authorizeAction` indexer evidence is not retained yet. That write is operator-manual (UI + wallet), not a CLI automation gate.
 
 ## Current — Wave 2 ECONOMY (Preview-sized)
 
@@ -35,8 +35,10 @@ Experimental / not claimed as complete:
 
 ## Next
 
-- Retain Wave 1 `authorizeAction` Preview evidence
+- Operator-manual Preview writes: Wave 1 `authorizeAction`, then Wave 2 credential / authorize / settle (record public tx + indexer rows in `docs/preview-evidence.md`)
+- Redeploy the hosted UI after the current fail-closed wallet/proving hardening lands
 - Publish companion contract addresses after SucceedEntirely deploys
+- YouTube demo + X/Discord posts (`docs/DEMO-SCRIPT.md`, `docs/COMMUNITY.md`)
 - Compact cross-contract award lookup when the language supports it
 
 ## Future — Wave 3 NETWORK

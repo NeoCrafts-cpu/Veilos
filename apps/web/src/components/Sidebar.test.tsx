@@ -23,8 +23,8 @@ describe("workspace sidebar", () => {
   it("renders grouped module tasks and the docs system link", () => {
     renderShell("/app/credentials/issue");
     expect(screen.getByText("Credentials")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^issue$/i }).getAttribute("aria-current")).toBe("page");
-    expect(screen.getByRole("link", { name: /^docs$/i }).getAttribute("href")).toBe("/docs");
+    expect(screen.getByRole("link", { name: /^credentials$/i }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: /request a payment/i })).toBeTruthy();
     expect(screen.queryByText(/session/i)).toBeNull();
     expect(screen.queryByText(/wave 2 vault locked/i)).toBeNull();
   });

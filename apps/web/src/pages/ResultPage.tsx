@@ -51,9 +51,9 @@ export function ResultPage() {
         </h1>
         {authorized ? (
           <ul>
-            <li>Authorization conditions satisfied</li>
-            <li>Midnight returned SucceedEntirely</li>
-            <li>Indexer has the public action record</li>
+            <li>Midnight allowed this request</li>
+            <li>The public result is on the ledger</li>
+            <li>Amount and vendor stay private</li>
             <li>No funds were transferred</li>
           </ul>
         ) : (

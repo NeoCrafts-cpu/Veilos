@@ -1,97 +1,96 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { HeroArt } from "../components/HeroArt.js";
 import { Logo } from "../components/Logo.js";
 import { Reveal } from "../components/Reveal.js";
 import { SkipLink } from "../components/SkipLink.js";
 import { WindowChrome } from "../components/WindowChrome.js";
+import { LIVE_AGENT_NAME, LIVE_MEMBER_NAME, LIVE_ORG_NAME } from "../lib/org-display.js";
 import "../landing.css";
 import { useSession } from "../state/session.js";
 
 const SECTIONS = [
-  { id: "product", label: "Product" },
+  { id: "product", label: "Use" },
   { id: "protocol", label: "Protocol" },
-  { id: "modules", label: "Modules" },
-  { id: "architecture", label: "Architecture" },
-  { id: "demo", label: "Live flow" },
+  { id: "modules", label: "Organization" },
+  { id: "architecture", label: "Runtime" },
+  { id: "demo", label: "Path" },
   { id: "roadmap", label: "Roadmap" },
 ] as const;
 
 const MARQUEE = [
-  "Private",
-  "Verifiable",
-  "Autonomous",
-  "Compact",
-  "Midnight",
-  "Proof not secret",
-  "Agent control",
-  "Privacy OS",
+  "Request a payment",
+  "Prove on Midnight",
+  "Record the result",
+  "Issue a credential",
+  "Settle in public",
+  LIVE_AGENT_NAME,
+  "Midnight Preview",
 ];
 
-const LIVE_MODULES = [
+const USE_CASES = [
   {
-    title: "Private authorization policy",
-    body: "Limits stay in private state. The ledger only sees that an action was authorized. No funds are transferred.",
+    title: "Request a payment",
+    body: `${LIVE_AGENT_NAME} asks to pay a vendor. Amount and reason stay private. Authorization does not move funds.`,
+    stamp: "On Preview",
+    to: "/app/authorize/new",
+    cta: "Request a payment",
     tone: "scan",
-    stamp: "Wave 1",
   },
   {
-    title: "Agent authorization",
-    body: "Prove amount is inside a committed policy without publishing the policy values.",
-    tone: "blue",
-    stamp: "Live",
-  },
-  {
-    title: "Privacy inspector",
-    body: "Every screen splits PUBLIC vs PRIVATE. Authorized never appears without SucceedEntirely.",
+    title: "Issue a credential",
+    body: "Bind a treasury credential to one unshielded recipient and private limits. Only a commitment is public.",
+    stamp: "On Preview",
+    to: "/app/credentials",
+    cta: "Open credentials",
     tone: "",
-    stamp: "Live",
+  },
+  {
+    title: "Settle a payment",
+    body: "Deposit unshielded NIGHT, authorize against the credential, then settle. Amount and recipient become public on purpose.",
+    stamp: "On Preview",
+    to: "/app/treasury",
+    cta: "Open treasury",
+    tone: "blue",
   },
 ] as const;
 
-const NEXT_MODULES = [
+const PROTOCOL = [
   {
-    title: "Identity & credentials",
-    body: "Prove a fact about a member or agent without dumping the credential.",
-    wave: "Live",
+    n: "01",
+    title: "Private",
+    body: "Policy, credential, amount, and reason stay in witnesses. The chain never receives the budget.",
   },
   {
-    title: "Governance",
-    body: "Private eligibility and ballot commitments. Only the finalized aggregate is public. Trustless tally completeness is experimental.",
-    wave: "Live",
+    n: "02",
+    title: "Proof",
+    body: "Compact checks the request against those commitments. If it is outside policy, nothing is written.",
   },
   {
-    title: "Procurement",
-    body: "Private bids, public validity. Suppliers stay masked until disclosure.",
-    wave: "Live",
-  },
-  {
-    title: "Credit & reputation",
-    body: "Network-level standing without a public credit file.",
-    wave: "Wave 3",
-  },
-  {
-    title: "Escrow & marketplace",
-    body: "Settlements and agent markets after the core authorization loop is real.",
-    wave: "Wave 3",
-  },
-  {
-    title: "Selective disclosure",
-    body: "Auditors see what they are entitled to. Everyone else sees a proof.",
-    wave: "Live",
+    n: "03",
+    title: "Public",
+    body: "The ledger records an action id and a result. Settlement is a later, optional, unshielded step.",
   },
 ] as const;
 
 const ARCH = [
-  { title: "Compact", detail: "authorization.compact · language 0.23" },
+  { title: "Compact", detail: "authorization.compact · economy-preview.compact · language 0.23" },
   { title: "Private state", detail: "Witnesses rebound to public commitments" },
-  { title: "ZK proof", detail: "Wallet Proof Station or local proof-server · never mocked" },
-  { title: "Wallet", detail: "DApp Connector v4 · Lace / window.midnight" },
+  { title: "ZK proof", detail: "1AM Proof Station or proof-server 8.1.0 · never mocked" },
+  { title: "Wallet", detail: "DApp Connector v4 · Lace / 1AM" },
   { title: "Indexer", detail: "GraphQL v4 · public result only" },
   { title: "MidnightJS", detail: "4.1.1 deployContract / submitCallTx" },
 ] as const;
 
+const PATH = [
+  { n: "01", title: "Request", body: `Ask ${LIVE_AGENT_NAME} to pay a vendor. The values stay in this browser.` },
+  { n: "02", title: "Prove", body: "Connect 1AM. Compact authorizes against the private policy." },
+  { n: "03", title: "Record", body: "A public authorized row appears. Funds have not moved." },
+  { n: "04", title: "Settle", body: "Optional. Amount and recipient become public on the treasury contract." },
+] as const;
+
 export function LandingPage() {
-  const { startOwnerSetup, choosePreview, walletError } = useSession();
+  const { choosePreview, walletError } = useSession();
   const [active, setActive] = useState<string>("product");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -121,8 +120,8 @@ export function LandingPage() {
           <Logo size={48} />
         </a>
         <div className="nav-tools">
-          <Link className="btn landing-nav-cta" to="/app/setup" onClick={() => startOwnerSetup()}>
-            Get Started
+          <Link className="btn landing-nav-cta" to="/app" onClick={() => choosePreview()}>
+            Open organization
           </Link>
           <button
             type="button"
@@ -166,34 +165,37 @@ export function LandingPage() {
           </p>
           <div className="hero-copy">
             <WindowChrome />
-            {walletError ? <p className="footer-note">{walletError}</p> : null}
-            <div className="hero-meta">
-              <p className="landing-kicker">
-                <span className="pulse" aria-hidden="true">
-                  ■
-                </span>
-                Privacy OS · Midnight Network
+            <div className="hero-copy-text">
+              {walletError ? <p className="footer-note">{walletError}</p> : null}
+              <div className="hero-meta">
+                <p className="landing-kicker">
+                  <span className="pulse" aria-hidden="true">
+                    ■
+                  </span>
+                  Privacy OS · Midnight Network
+                </p>
+                <span className="hero-stamp">01 / OS</span>
+              </div>
+              <h1 className="hero-banner">
+                <span className="hero-line">Private.</span>
+                <span className="hero-line slab">Verifiable.</span>
+                <span className="hero-line mark">Autonomous.</span>
+              </h1>
+              <p className="lede">
+                {LIVE_ORG_NAME} is on Midnight Preview. {LIVE_AGENT_NAME} can request a payment without
+                publishing the budget. Compact records a verified result. Unshielded settlement is optional
+                and public by design.
               </p>
-              <span className="hero-stamp">01 / OS</span>
+              <div className="hero-cta">
+                <Link className="btn" to="/app" onClick={() => choosePreview()}>
+                  Open organization
+                </Link>
+                <Link className="btn ghost" to="/app/authorize/new" onClick={() => choosePreview()}>
+                  Request a payment
+                </Link>
+              </div>
             </div>
-            <h1 className="hero-banner">
-              <span className="hero-line">Private.</span>
-              <span className="hero-line slab">Verifiable.</span>
-              <span className="hero-line mark">Autonomous.</span>
-            </h1>
-            <p className="lede">
-              If an agent can spend, someone must prove it was allowed — without publishing the budget.
-              Veilos commits private policy on Midnight, then records a verified result. Unshielded NIGHT
-              settlement is optional and public by design.
-            </p>
-            <div className="hero-cta">
-              <Link className="btn" to="/app/setup" onClick={() => startOwnerSetup()}>
-                Get Started
-              </Link>
-              <Link className="btn ghost" to="/app/preview" onClick={() => choosePreview()}>
-                Explore public Preview organization
-              </Link>
-            </div>
+            <HeroArt />
           </div>
         </section>
 
@@ -206,126 +208,113 @@ export function LandingPage() {
         </div>
 
         <section id="product" className="landing-section">
-          <Reveal>
-            <p className="section-index">01 / Product</p>
-            <h2 className="display">Live modules</h2>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">01 / Use</p>
+              <h2 className="display">What you can do today</h2>
+            </div>
             <p className="section-copy">
-              This buildathon Wave ships the authorization kernel and the economy modules (credentials,
-              treasury, governance, procurement, auditor). Wave 3 stays labeled until Preview authorize
-              and settle evidence is retained.
+              {LIVE_ORG_NAME} is live on Preview. Request a payment against a private policy, issue a
+              credential, or settle unshielded NIGHT. Votes, bids, and auditor desks are in the app;
+              those contracts are not on Preview yet.
             </p>
           </Reveal>
           <div className="module-grid">
-            {LIVE_MODULES.map((module, index) => (
+            {USE_CASES.map((item, index) => (
               <Reveal
-                key={module.title}
+                key={item.title}
                 as="article"
                 delayMs={index * 90}
-                className={`card module-card ${module.tone === "blue" ? "blue" : ""} ${module.tone === "scan" ? "scan" : ""} ${index === 0 ? "span-2" : ""}`}
+                className={`card use-card ${item.tone === "blue" ? "blue" : ""} ${item.tone === "scan" ? "scan" : ""}`}
               >
-                <span className="stamp">{module.stamp}</span>
-                <div className="label">Live module</div>
-                <h3>{module.title}</h3>
-                {module.tone === "scan" ? <p className="mask">████████ SHIELDED</p> : <p>{module.body}</p>}
-                {module.tone === "scan" ? <p>{module.body}</p> : null}
+                <span className="stamp">{item.stamp}</span>
+                <div className="label">Workflow</div>
+                <h3>{item.title}</h3>
+                {item.tone === "scan" ? <p className="mask">████████ SHIELDED</p> : null}
+                <p>{item.body}</p>
+                <Link className="btn ghost" to={item.to} onClick={() => choosePreview()}>
+                  {item.cta}
+                </Link>
               </Reveal>
             ))}
           </div>
         </section>
 
         <section id="protocol" className="landing-section">
-          <Reveal>
-            <p className="section-index">02 / Protocol</p>
-            <h2 className="display">How it works</h2>
-            <p className="section-copy">PRIVATE → PROOF → PUBLIC. The chain sees the proof. Not the secret.</p>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">02 / Protocol</p>
+              <h2 className="display">How it stays private</h2>
+            </div>
+            <p className="section-copy">The chain sees the proof. Not the secret. Failed proofs write nothing.</p>
           </Reveal>
-          <div className="protocol-row">
-            <Reveal as="article" className="card protocol-card">
-              <h3>PRIVATE</h3>
-              <p>Policy values, credentials, and spend stay in private state and witnesses.</p>
-            </Reveal>
-            <div className="flow-arrow" aria-hidden="true">
-              →
-            </div>
-            <Reveal as="article" delayMs={80} className="card protocol-card blue">
-              <h3>PROOF</h3>
-              <p>Compact circuits bind untrusted witnesses to public commitments.</p>
-            </Reveal>
-            <div className="flow-arrow" aria-hidden="true">
-              →
-            </div>
-            <Reveal as="article" delayMs={160} className="card protocol-card">
-              <h3>PUBLIC</h3>
-              <p>Only action id, result, and commitments hit the ledger.</p>
-            </Reveal>
+          <div className="protocol-track">
+            {PROTOCOL.map((step, index) => (
+              <Reveal key={step.title} as="article" delayMs={index * 80} className={`card protocol-card ${index === 1 ? "blue" : ""}`}>
+                <span className="protocol-num">{step.n}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </Reveal>
+            ))}
           </div>
         </section>
 
         <section id="modules" className="landing-section">
-          <Reveal>
-            <p className="section-index">03 / Operating system</p>
-            <h2 className="display">Agent control</h2>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">03 / Organization</p>
+              <h2 className="display">{LIVE_ORG_NAME}</h2>
+            </div>
             <p className="section-copy">
-              Veilos is an OS for autonomous organizations: humans write constraints, agents request
-              actions, Midnight authorizes what is allowed.
+              Humans write constraints. {LIVE_AGENT_NAME} requests actions. Midnight authorizes what is
+              allowed. This is the live Preview organization, not a mock.
             </p>
           </Reveal>
-          <div className="os-panel">
+          <div className="org-board">
             <Reveal as="article" className="card">
-              <div className="label">Control plane</div>
-              <h3>Humans define the rules</h3>
-              <p>Per-action and daily commitments. Approved vendors as hashes. No plaintext limits on-chain.</p>
+              <div className="label">Roster</div>
+              <h3>Who can act</h3>
               <div className="agent-list">
                 <div className="agent-row" data-state="active">
-                  <span>TREASURY-01</span>
+                  <span>{LIVE_MEMBER_NAME}</span>
+                  <span>
+                    <span className="dot on" /> Member
+                  </span>
+                </div>
+                <div className="agent-row" data-state="active">
+                  <span>{LIVE_AGENT_NAME}</span>
                   <span>
                     <span className="dot on" /> Active
                   </span>
                 </div>
-                <div className="agent-row" data-state="active">
-                  <span>PROCUREMENT-02</span>
-                  <span>
-                    <span className="dot on" /> Scheduled
-                  </span>
-                </div>
                 <div className="agent-row" data-state="paused">
-                  <span>CREDIT-01</span>
+                  <span>Votes · Bids · Auditor</span>
                   <span>
-                    <span className="dot" /> Wave 3
+                    <span className="dot" /> Not on Preview
                   </span>
                 </div>
               </div>
             </Reveal>
             <Reveal delayMs={100} as="article" className="card blue">
               <div className="label">Execution</div>
-              <h3>Agents execute</h3>
-              <p>An authorization request is a private witness plus a public action id. Midnight decides. No funds move.</p>
+              <h3>Agents request. Midnight decides.</h3>
+              <p>
+                A payment request is a private witness plus a public action id. Authorization does not
+                transfer funds. Settlement on the economy contract does, and that amount is public.
+              </p>
+              <Link className="btn ghost" to="/app" onClick={() => choosePreview()}>
+                Open organization
+              </Link>
             </Reveal>
           </div>
-
-          <details className="landing-roadmap">
-            <summary>Economy modules in this build · Wave 3 later</summary>
-            <p className="section-copy">
-              Credentials, governance, procurement, and disclosure are in the operator UI. Credit and
-              marketplace wait for Wave 3.
-            </p>
-            <div className="module-grid">
-              {NEXT_MODULES.map((module) => (
-                <article key={module.title} className="card module-card">
-                  <span className="stamp">{module.wave}</span>
-                  <div className="label">Scheduled module</div>
-                  <h3>{module.title}</h3>
-                  <p>{module.body}</p>
-                </article>
-              ))}
-            </div>
-          </details>
         </section>
 
         <section id="architecture" className="landing-section">
-          <Reveal>
-            <p className="section-index">04 / Midnight</p>
-            <h2 className="display">Architecture</h2>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">04 / Runtime</p>
+              <h2 className="display">Official Midnight only</h2>
+            </div>
             <p className="section-copy">
               No EVM stand-in. No mocked ledger success. Compact, proof server, indexer, and wallet are
               the runtime.
@@ -333,7 +322,7 @@ export function LandingPage() {
           </Reveal>
           <div className="arch-grid">
             {ARCH.map((item, index) => (
-              <Reveal key={item.title} as="article" delayMs={index * 110} className="card arch-card">
+              <Reveal key={item.title} as="article" delayMs={index * 90} className="card arch-card">
                 <div className="label">Runtime</div>
                 <h3>{item.title}</h3>
                 <p className="mono">{item.detail}</p>
@@ -343,46 +332,53 @@ export function LandingPage() {
         </section>
 
         <section id="demo" className="landing-section">
-          <Reveal>
-            <p className="section-index">05 / Live path</p>
-            <h2 className="display">Authorization loop</h2>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">05 / Path</p>
+              <h2 className="display">One payment, end to end</h2>
+            </div>
             <p className="section-copy">
-              Operators set a private policy, create an agent, and authorize a payment request. Compact proves the
-              request against Midnight. Only the verified result becomes public. No funds are transferred.
+              Authorize first. Settle only if you intend amount and recipient to become public.
             </p>
           </Reveal>
-          <div className="demo-split">
-            <Reveal as="article" className="card lime demo-ok">
-              <div className="label">Private</div>
-              <h3>Policy and amount</h3>
-              <p>Limits, vendor, credential, and reason stay in witnesses. They are never printed.</p>
-            </Reveal>
-            <Reveal delayMs={90} as="article" className="card red demo-no">
-              <div className="label">Public</div>
-              <h3>Verified result</h3>
-              <p>Authorized only after SucceedEntirely and indexer read-back. Failed proofs write nothing.</p>
-            </Reveal>
+          <div className="journey-strip">
+            {PATH.map((step, index) => (
+              <Reveal key={step.title} as="article" delayMs={index * 70} className={`card journey-card ${index === 1 ? "lime" : ""}`}>
+                <span className="protocol-num">{step.n}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </Reveal>
+            ))}
           </div>
         </section>
 
         <section id="roadmap" className="landing-section">
-          <Reveal>
-            <p className="section-index">06 / Roadmap</p>
-            <h2 className="display">Waves</h2>
+          <Reveal className="section-head">
+            <div>
+              <p className="section-index">06 / Roadmap</p>
+              <h2 className="display">What is live</h2>
+            </div>
+            <p className="section-copy">Status from the repository, not from a pitch deck.</p>
           </Reveal>
           <div className="roadmap">
             <Reveal as="article" className="card roadmap-card" data-wave="1">
-              <div className="label">Now</div>
+              <div className="label">On Preview</div>
               <h3>Wave 1 · Core</h3>
-              <p>Organization, agent, private policy, proof, Compact, Midnight transaction, Privacy Inspector.</p>
+              <p>
+                Organization, {LIVE_MEMBER_NAME}, {LIVE_AGENT_NAME}, private policy, Compact
+                authorization, Privacy Inspector.
+              </p>
             </Reveal>
             <Reveal delayMs={80} as="article" className="card roadmap-card" data-wave="2">
-              <div className="label">Current</div>
+              <div className="label">On Preview</div>
               <h3>Wave 2 · Economy</h3>
-              <p>Credentials, unshielded treasury, private ballots, sealed bids, scoped auditor grants on Preview-sized contracts.</p>
+              <p>
+                Credentials, unshielded deposit, authorize, and settle on economy-preview. Votes, bids,
+                and auditor circuits are compiled; companion contracts are not deployed yet.
+              </p>
             </Reveal>
             <Reveal delayMs={160} as="article" className="card roadmap-card">
-              <div className="label">Later</div>
+              <div className="label">Not started</div>
               <h3>Wave 3 · Network</h3>
               <p>Credit, reputation, escrow, marketplace, external verification.</p>
             </Reveal>
@@ -393,14 +389,17 @@ export function LandingPage() {
           <Reveal className="cta-panel">
             <WindowChrome />
             <div className="label">Ready</div>
-            <h2>Start private authorization</h2>
-            <p>Create your organization, protect operator access, and authorize a request. Inspect what stayed private.</p>
+            <h2>Open the live organization</h2>
+            <p>
+              {LIVE_ORG_NAME} · {LIVE_AGENT_NAME}. Request a payment and inspect what Midnight made
+              public versus what stayed private.
+            </p>
             <div className="row">
-              <Link className="btn" to="/app/setup" onClick={() => startOwnerSetup()}>
-                Get Started
+              <Link className="btn" to="/app" onClick={() => choosePreview()}>
+                Open organization
               </Link>
               <Link className="btn ghost" to="/app/privacy">
-                Privacy design
+                What's public
               </Link>
             </div>
           </Reveal>
@@ -410,7 +409,7 @@ export function LandingPage() {
       <footer className="landing-footer">
         <div className="landing-footer-inner">
           <span>The blockchain sees the proof. Not the secret.</span>
-          <span>Midnight Compact · MidnightJS 4.1.1</span>
+          <span>Midnight Preview · Compact 0.23 · MidnightJS 4.1.1</span>
         </div>
       </footer>
     </div>

@@ -11,9 +11,9 @@ Target: Midnight Preview, Vercel UI `https://veilos-web-ten.vercel.app`
 - Expected: The dedicated docs page or task route renders.
 - Actual: Both routes resolve to the landing page. The served document has no `velios-build` marker and uses `assets/index-DUZ7-Mgs.js`.
 - Root cause: The target Vercel project is serving an older application bundle. Current source already contains explicit SPA rewrites and both routes.
-- Fix: Source-side route rewrites and build identity are present; deployment is still required.
+- Fix: Source-side route rewrites and build identity are present. Rechecked 2026-09-21: production serves `velios-build=136c61f2c67d` (git `136c61f`) with SPA 200 for `/docs` and `/app/treasury/authorize`. In-progress fail-closed wallet/proving work is still ahead of that deploy.
 - Regression: `production-build.smoke.test.ts`, route tests in `App.test.tsx`, and `workspace-sidebar.spec.ts`.
-- Status: BLOCKED — redeploy the current build, then repeat production browser QA.
+- Status: FIXED ON PRODUCTION for 136c61f; redeploy still required after the current uncommitted hardening.
 
 ## AUD-002 — Authorization review accepted an unvalidated deep link
 
@@ -164,11 +164,11 @@ Target: Midnight Preview, Vercel UI `https://veilos-web-ten.vercel.app`
 - Severity: Blocker for a 100% readiness claim
 - Environment: Midnight Preview
 - Expected: Retained transaction IDs and exact indexer read-back for every write circuit.
-- Actual: Source wiring and gated live tests exist, but this audit does not have complete retained Preview evidence for every browser journey. The current production bundle is also stale.
+- Actual: Source wiring exists, but retained Preview write evidence is incomplete. Hosted UI for git `136c61f` is live; remaining writes are operator-manual.
 - Root cause: External wallet approval, funded DUST, proving, and a current deployment are required.
-- Fix: No fake substitute is permitted. Redeploy, connect a funded Preview wallet with Proof Station, execute the live matrix, and retain public transaction/indexer evidence.
+- Fix: No fake substitute is permitted. Operator completes live writes in the UI with a funded Preview wallet and Proof Station or local proof-server, then records public tx + indexer rows in `docs/preview-evidence.md`.
 - Regression: `wave2-live-preview.test.ts` is environment-gated and must be run with required live variables.
-- Status: BLOCKED
+- Status: OWNER-MANUAL — live Preview writes are not CLI-automated; retain public tx + indexer rows in `docs/preview-evidence.md`
 
 ## AUD-015 — Public documentation referenced a missing Vercel hostname
 

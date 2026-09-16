@@ -65,3 +65,8 @@ export {
   parseIndexerBlockTimestampMs,
 } from "./ledger-clock.js";
 export { resolveIndexerHttpUrl } from "./browser-provider-urls.js";
+export {
+  assertWalletSessionCurrent,
+  shouldInvalidateWalletSessionAfterErrors,
+  WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE,
+} from "./wallet-session-guard.js";

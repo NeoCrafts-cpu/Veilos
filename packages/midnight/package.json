@@ -19,7 +19,8 @@
     "./economy-client": "./src/economy-client.ts",
     "./companion-client": "./src/companion-client.ts",
     "./economy-ledger": "./src/economy-ledger.ts",
-    "./user-address": "./src/user-address.ts"
+    "./user-address": "./src/user-address.ts",
+    "./wallet-session-guard": "./src/wallet-session-guard.ts"
   },
   "scripts": {
     "test": "vitest run"

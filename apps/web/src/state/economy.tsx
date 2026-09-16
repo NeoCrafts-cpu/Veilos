@@ -25,6 +25,7 @@ import { newActionId, organizationIdFromName } from "@velios/midnight/ids";
 import { explainCaughtError } from "@velios/midnight/status";
 import type { AuditorLedgerView, EconomyLedgerView, GovernanceLedgerView, ProcurementLedgerView } from "@velios/midnight/economy-ledger";
 import { compactUserAddress, parseUserAddressBytes } from "@velios/midnight/user-address";
+import { beginWalletWork, endWalletWork } from "../lib/wallet-work-lock.js";
 import { DEMO_ORG_NAME, useSession } from "./session.js";
 import {
   decryptWave2Vault,
@@ -38,6 +39,7 @@ import {
   type StoredPaymentRecord,
   type Wave2VaultPayload,
 } from "../lib/wave2-vault.js";
+import { economyOwnerSecretFromBackup } from "../lib/economy-owner-backup.js";
 import { contractRole, stripPublishedWriteAddress, type ContractRole } from "../lib/wave2-ownership.js";
 import { readWave2Contracts, writeWave2Contracts, type Wave2ContractSelection } from "../lib/wave2-contracts.js";
 
@@ -113,6 +115,7 @@ export type EconomyValue = {
   wave2VaultStatus: Wave2VaultStatus;
   createWave2Vault: () => Promise<void>;
   unlockWave2Vault: (passphrase: string) => Promise<void>;
+  importEconomyOwnerAccess: (file: File) => Promise<void>;
   busy: boolean;
   refreshLedgers: () => Promise<void>;
   deployEconomy: () => Promise<Wave2CallResult>;
@@ -166,6 +169,8 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     withOperatorPassphrase,
     publicStore,
     vaultStatus,
+    networkLive,
+    dustReady,
   } = useSession();
   const publishedEconomy = useMemo(() => publishedEconomyDeploymentFor(network.networkId), [network.networkId]);
   const [contracts, setContracts] = useState<Wave2ContractSelection>({ networkId: network.networkId });
@@ -266,9 +271,18 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     }
     void withOperatorPassphrase(async (passphrase) => {
       try {
-        setVault(await decryptWave2Vault(encrypted, passphrase));
+        const opened = await decryptWave2Vault(encrypted, passphrase);
+        setVault(opened);
+        vaultRef.current = opened;
         setVaultReady(true);
         setWave2VaultStatus("ready");
+        setContracts((prev) => {
+          const next = { ...prev, networkId: network.networkId };
+          if (opened.economyOwnerSecret && publishedEconomy && (!prev.economy || prev.economy === publishedEconomy.contractAddress)) {
+            next.economy = publishedEconomy.contractAddress;
+          }
+          return next;
+        });
       } catch {
         setVault(emptyWave2Vault());
         setVaultReady(false);
@@ -278,7 +292,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       setVaultReady(false);
       setWave2VaultStatus("locked");
     });
-  }, [network.networkId, vaultStatus, withOperatorPassphrase]);
+  }, [network.networkId, publishedEconomy, vaultStatus, withOperatorPassphrase]);
 
   const indexerProviders = useCallback(async (): Promise<LooseProviders> => {
     const active = midnightProviders as LooseProviders | null;
@@ -328,9 +342,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     }
     callBusyRef.current = true;
     setBusy(true);
+    beginWalletWork();
     const progress: Wave2Progress = (status, extra) => setLastResult({ status, ...extra });
     progress("wallet");
     try {
+      const { LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
+      if (networkLive !== true) throw new Error(LOCAL_PROOF_MISSING);
+      if (dustReady !== true) throw new Error("Wallet has no spendable DUST yet.");
       const result = await work(progress);
       setLastResult(result);
       return result;
@@ -339,16 +357,17 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       setLastResult(result);
       return result;
     } finally {
+      endWalletWork();
       callBusyRef.current = false;
       setBusy(false);
     }
-  }, []);
+  }, [dustReady, networkLive]);
 
   const requireOwnerSecret = useCallback(
     (field: "economyOwnerSecret" | "governanceOwnerSecret" | "procurementOwnerSecret" | "auditorOwnerSecret") => {
       const current = vaultRef.current[field];
       if (!current) {
-        throw new Error("This vault did not deploy that contract. Deploy your own Preview contract to operate write circuits.");
+        throw new Error("This organization access cannot change that record. Unlock the matching backup.");
       }
       return hex32ToBytes(asHex32(current));
     },
@@ -394,6 +413,40 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     [network.networkId, persistVault],
   );
 
+  const bindPublishedEconomy = useCallback(() => {
+    if (!publishedEconomy) return;
+    setContracts((prev) => ({
+      ...prev,
+      networkId: network.networkId,
+      economy: publishedEconomy.contractAddress,
+    }));
+  }, [network.networkId, publishedEconomy]);
+
+  const importEconomyOwnerAccess = useCallback(
+    async (file: File) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await file.text()) as unknown;
+      } catch {
+        throw new Error("The backup could not be opened.");
+      }
+      const secret = economyOwnerSecretFromBackup(parsed);
+      try {
+        await persistVault({ ...vaultRef.current, economyOwnerSecret: secret });
+      } catch (error) {
+        throw new Error(
+          error instanceof Error && /unlock/i.test(error.message)
+            ? "Unlock the organization first."
+            : "Treasury access could not be saved in this tab.",
+        );
+      }
+      setVaultReady(true);
+      setWave2VaultStatus("ready");
+      bindPublishedEconomy();
+    },
+    [bindPublishedEconomy, persistVault],
+  );
+
   const value = useMemo<EconomyValue>(
     () => ({
       selection,
@@ -414,6 +467,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       wave2VaultStatus,
       createWave2Vault,
       unlockWave2Vault,
+      importEconomyOwnerAccess,
       busy,
       refreshLedgers,
       deployEconomy: () =>
@@ -543,7 +597,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
         }),
       issueCredential: (input) =>
         runCall(async (progress) => {
-          if (!writeEconomyAddress) throw new Error("Deploy or join an economy-preview contract first.");
+          if (!writeEconomyAddress) throw new Error("Unlock this organization before issuing credentials.");
           const providers = requireProviders();
           const ownerSecret = requireOwnerSecret("economyOwnerSecret");
           const holderSecret = randomBytes32();
@@ -1270,6 +1324,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       economy,
       writeEconomyAddress,
       createWave2Vault,
+      importEconomyOwnerAccess,
       mintOwnerSecret,
       ownership,
       publishedEconomy,

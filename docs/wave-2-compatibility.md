@@ -6,7 +6,7 @@
 | MidnightJS 4.1.1 `submitCallTx` | Same client pattern as Wave 1 |
 | Wallet SDK 1.2.0 unshielded transfer | Documented `WalletFacade.transferTransaction` |
 | Full `economy.compact` Preview deploy | **Rejected** — `Transaction would exhaust the block limits` |
-| `economy-preview.compact` Preview deploy | **SucceedEntirely** — `0b4a8d7e…547c8f` |
+| `economy-preview.compact` Preview deploy | **SucceedEntirely** — `bb910a79…e4df` |
 | Indexer v4 GraphQL | Same confirmation adapter as Wave 1 |
 | `@midnight-ntwrk/midnight-did-api` 0.5.0 | **Not production** — depends on MidnightJS 4.0.2 |
 | midnight-verifiable-credentials | Experimental adapter only |

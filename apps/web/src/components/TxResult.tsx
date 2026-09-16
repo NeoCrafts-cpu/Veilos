@@ -2,18 +2,24 @@ import type { ReactNode } from "react";
 import type { Wave2Status } from "../state/economy.js";
 
 const TITLES: Record<Exclude<Wave2Status, "idle">, string> = {
-  wallet: "Awaiting wallet approval",
+  wallet: "Approve in wallet",
   proving: "Generating proof",
-  working: "Proving on Midnight",
-  submitted: "Submitted to Midnight",
-  indexing: "Confirming on the indexer",
-  confirmed: "Indexer confirmed",
-  refused: "REFUSED",
-  stale: "Indexer stale",
+  working: "Generating proof",
+  submitted: "Sent to Midnight",
+  indexing: "Confirming",
+  confirmed: "Confirmed",
+  refused: "Refused",
+  stale: "Still confirming",
   failed: "Failed",
 };
 
-const PHASES: Wave2Status[] = ["wallet", "proving", "submitted", "indexing", "confirmed"];
+const PHASES: { id: Wave2Status; label: string }[] = [
+  { id: "wallet", label: "Approve in wallet" },
+  { id: "proving", label: "Generating proof" },
+  { id: "submitted", label: "Sent" },
+  { id: "indexing", label: "Confirming" },
+  { id: "confirmed", label: "Confirmed" },
+];
 
 export function TxResult({
   status,
@@ -26,7 +32,7 @@ export function TxResult({
 }) {
   if (status === "idle") return null;
   const current = status === "working" ? "proving" : status;
-  const currentIndex = PHASES.indexOf(current);
+  const currentIndex = PHASES.findIndex((phase) => phase.id === current);
   const failed = status === "refused" || status === "failed" || status === "stale";
   return (
     <article className={`card${status === "confirmed" ? " lime" : failed ? " red" : ""}`}>
@@ -34,10 +40,10 @@ export function TxResult({
       <ol className="wave2-phases">
         {PHASES.map((phase, index) => {
           const done = currentIndex > index || status === "confirmed";
-          const active = phase === current && !failed && status !== "confirmed";
+          const active = phase.id === current && !failed && status !== "confirmed";
           return (
-            <li key={phase} data-done={done} data-current={active}>
-              {phase}
+            <li key={phase.id} data-done={done} data-current={active}>
+              {phase.label}
             </li>
           );
         })}

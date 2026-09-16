@@ -14,6 +14,7 @@
   },
   "scripts": {
     "preview": "tsx src/preview-deploy.ts",
+    "wave2": "tsx src/preview-wave2.ts",
     "export-private-state": "tsx src/export-private-state.ts",
     "test": "vitest run"
   },
@@ -30,6 +31,8 @@
     "@midnight-ntwrk/wallet-sdk": "1.2.0",
     "@scure/bip39": "^2.2.0",
     "@velios/contracts": "workspace:*",
+    "@velios/credentials": "workspace:*",
+    "@velios/economy": "workspace:*",
     "@velios/midnight": "workspace:*",
     "@velios/policy-engine": "workspace:*",
     "@velios/shared-types": "workspace:*",

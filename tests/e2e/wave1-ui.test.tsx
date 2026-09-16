@@ -22,9 +22,9 @@ function renderAt(path: string) {
 describe("E1–E10 Wave 1 UI flow", () => {
   afterEach(() => cleanup());
   it("E1–E3 public preview and organization screens exist", async () => {
-    renderAt("/app/preview");
+    renderAt("/app");
     expect(screen.getAllByText(/ACME AUTONOMOUS SYSTEMS/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Inspect public\/private boundary|public Preview|Authorizations/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Request a payment|Authorizations|verified payments/i).length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/25000|ownerSecret|treasury balance/i);
   });
 
@@ -62,7 +62,7 @@ describe("E1–E10 Wave 1 UI flow", () => {
     renderAt("/app/agents/demo/action");
     const amount = screen.getByLabelText(/amount/i);
     fireEvent.change(amount, { target: { value: "100000" } });
-    expect(screen.getByRole("button", { name: /review authorization/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /review request/i })).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/25000/);
     expect(document.body.textContent).not.toMatch(/private policy limit: \$25,000/i);
   });

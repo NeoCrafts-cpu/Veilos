@@ -26,26 +26,44 @@ import {
 } from "@velios/contracts/node";
 import {
   agentIdFromLabel,
+  authorizationWindowFromLedger,
   decodePrivateState,
+  fetchIndexerNowSeconds,
   getNetworkConfig,
   memberIdFromLabel,
+  newActionId,
   proofServerReachable,
+  resolveIndexerHttpUrl,
   roleLabelToBytes,
   vendorIdFromRecipient,
   writeJoinedPrivateState,
   type NetworkConfig,
 } from "@velios/midnight";
-import { callCircuit, deployOrganization } from "@velios/midnight/client";
+import { authorizePayment, callCircuit, deployOrganization } from "@velios/midnight/client";
 import { deployEconomyOrganization } from "@velios/midnight/economy-client";
-import { currentAuthorizationWindow, randomBytes32 } from "@velios/policy-engine";
-import { MIDNIGHT_SUCCESS_STATUS, hex32ToBytes, type VeliosPrivateState } from "@velios/shared-types";
+import {
+  currentAuthorizationWindow,
+  previewAuthorize,
+  randomBytes32,
+  windowIsSafeToSubmit,
+} from "@velios/policy-engine";
+import {
+  MIDNIGHT_SUCCESS_STATUS,
+  asHex32,
+  hex32ToBytes,
+  type PaymentIntent,
+  type VeliosPrivateState,
+} from "@velios/shared-types";
 import {
   formatDust,
   formatNight,
   publicUnshieldedAddress,
   registerNightForDustWithRetry,
+  isDustReady,
+  readCurrentWalletState,
   waitForDustReady,
   waitForNightBalance,
+  waitForSpendableFunds,
   waitForSyncedState,
 } from "./dust.js";
 import { findRepoRoot } from "./paths.js";
@@ -54,7 +72,7 @@ import { buildCliProviders } from "./providers.js";
 import { writeGeneratedSeedFile } from "./secure-seed.js";
 import { resolvePrivateStorePassword } from "./private-store-password.js";
 import { loadEnvFile, resolveWalletSecret } from "./secret.js";
-import { MidnightWalletProvider, syncWallet } from "./wallet.js";
+import { MidnightWalletProvider } from "./wallet.js";
 
 (globalThis as { WebSocket?: typeof WebSocket }).WebSocket = WebSocket;
 
@@ -203,45 +221,53 @@ export async function runPreviewDeploy(
       console.log(`Official Preview faucet: ${PREVIEW_FAUCET}`);
     }
 
-    const syncTimeoutMs = Number(process.env["MIDNIGHT_SYNC_TIMEOUT_MS"] ?? (networkName === "preview" || networkName === "preprod" ? 60 * 60_000 : 10 * 60_000));
+    const syncTimeoutMs = Number(
+      process.env["MIDNIGHT_SYNC_TIMEOUT_MS"] ??
+        (networkName === "preview" || networkName === "preprod" ? 20 * 60_000 : 10 * 60_000),
+    );
     console.log("Syncing wallet with the official indexer...");
     const syncHeartbeat = setInterval(() => {
       console.log("Still syncing with the official indexer...");
     }, 30_000);
+    let synced: unknown;
     try {
-      // Full deploy waits for strictly-complete progress. DUST-only uses the
-      // official WalletFacade waitForSyncedState() so a second run can see
-      // already-registered NIGHT without another half-hour merkle catch-up.
-      if (dustOnly || economy || argv.includes("--create-agent")) {
-        await Promise.race([
-          waitForSyncedState(wallet.wallet),
-          new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error(`Wallet sync timeout after ${syncTimeoutMs}ms`)), syncTimeoutMs);
-          }),
-        ]);
-      } else {
-        await syncWallet(wallet.wallet, syncTimeoutMs);
+      // Operate/deploy as soon as tNIGHT + DUST are visible. Full merkle
+      // catch-up can take hours and is not required to submit.
+      synced = await Promise.race([
+        waitForSpendableFunds(wallet.wallet, nightBalance, syncTimeoutMs),
+        waitForSyncedState(wallet.wallet),
+      ]);
+    } catch (error) {
+      synced = await readCurrentWalletState(wallet.wallet);
+      const dust = dustSnapshot(synced);
+      if (dust.available <= 0n) {
+        throw error;
       }
+      console.log("Strict wallet sync timed out; continuing because this wallet already holds spendable funds.");
     } finally {
       clearInterval(syncHeartbeat);
     }
-
-    const synced = await waitForSyncedState(wallet.wallet);
     let night = nightBalance(synced);
     if (night === 0n) {
       console.log("Waiting for tNIGHT. Fund the unshielded address, then keep this process running.");
       night = await waitForNightBalance(wallet.wallet, nightBalance, Number(process.env["VELIOS_NIGHT_TIMEOUT_MS"] ?? 30 * 60_000));
     }
     console.log(`tNIGHT: ${formatNight(night)}`);
-
-    console.log("Registering NIGHT for DUST generation...");
-    const registration = await registerNightForDustWithRetry(wallet.wallet, wallet.unshieldedKeystore, {
-      onRetry: (message) => console.log(message),
-    });
-    if (registration === "already") {
-      console.log("NIGHT already registered for DUST, or DUST is already spendable.");
+    const peekDust = dustSnapshot(synced);
+    if (peekDust.available > 0n) {
+      console.log(`DUST already spendable: ${formatDust(peekDust.available)} (${peekDust.coins} coin(s))`);
+    } else if (night > 0n) {
+      console.log("tNIGHT is present. Waiting for spendable DUST without a full merkle catch-up...");
     } else {
-      console.log("Registration submitted. Waiting for spendable DUST...");
+      console.log("Registering NIGHT for DUST generation...");
+      const registration = await registerNightForDustWithRetry(wallet.wallet, wallet.unshieldedKeystore, {
+        onRetry: (message) => console.log(message),
+      });
+      if (registration === "already") {
+        console.log("NIGHT already registered for DUST, or DUST is already spendable.");
+      } else {
+        console.log("Registration submitted. Waiting for spendable DUST...");
+      }
     }
     // Preview DUST accrues after DustInitialUtxo; 180s is often too short.
     const dustTimeoutMs = Number(
@@ -251,11 +277,14 @@ export async function runPreviewDeploy(
       console.log("Still waiting for spendable DUST after NIGHT registration...");
     }, 30_000);
     try {
-      await waitForDustReady(wallet.wallet, dustTimeoutMs);
+      const already = dustSnapshot(await readCurrentWalletState(wallet.wallet));
+      if (already.available <= 0n) {
+        await waitForDustReady(wallet.wallet, dustTimeoutMs);
+      }
     } finally {
       clearInterval(dustHeartbeat);
     }
-    const dust = dustSnapshot(await waitForSyncedState(wallet.wallet));
+    const dust = dustSnapshot(await readCurrentWalletState(wallet.wallet));
     console.log(`DUST: ${formatDust(dust.available)} (${dust.coins} coin(s))`);
 
     if (dustOnly) {
@@ -274,15 +303,121 @@ export async function runPreviewDeploy(
       await writeJoinedPrivateState(providers, record.contractAddress, privateState);
       const agentLabel = process.env["VELIOS_AGENT_LABEL"]?.trim() || DEFAULT_AGENT_LABEL;
       const agentId = agentIdFromLabel(agentLabel);
-      const created = await callCircuit(providers, record.contractAddress, "createAgent", [
-        hex32ToBytes(agentId),
-        hex32ToBytes(record.memberId),
-      ]);
+      const created = await callCircuit(
+        providers,
+        record.contractAddress,
+        "createAgent",
+        [hex32ToBytes(agentId), hex32ToBytes(record.memberId)],
+        { compiledAssetsPath: zkConfigPath },
+      );
       if (created.status !== MIDNIGHT_SUCCESS_STATUS) {
         throw new Error("createAgent failed");
       }
       console.log(`Agent id: ${agentId}`);
       console.log(`createAgent: ${created.status}`);
+      return record;
+    }
+
+    if (argv.includes("--authorize-action")) {
+      const deployPath = path.join(repoRoot, "deployment.json");
+      const statePath = path.join(repoRoot, ".private-state", "preview.json");
+      if (!existsSync(deployPath) || !existsSync(statePath)) {
+        throw new Error("authorizeAction requires gitignored deployment.json and .private-state/preview.json");
+      }
+      const record = JSON.parse(readFileSync(deployPath, "utf8")) as PublicDeployment;
+      let privateState = decodePrivateState(JSON.parse(readFileSync(statePath, "utf8")));
+      const providers = buildCliProviders(wallet, zkConfigPath, config);
+      await writeJoinedPrivateState(providers, record.contractAddress, privateState);
+      const agentLabel = process.env["VELIOS_AGENT_LABEL"]?.trim() || DEFAULT_AGENT_LABEL;
+      const agentId = agentIdFromLabel(agentLabel);
+      const recipient = process.env["VELIOS_RECIPIENT"]?.trim() || DEFAULT_RECIPIENT;
+      const vendorId = vendorIdFromRecipient(recipient);
+      if (!argv.includes("--skip-policy")) {
+        const policy = await callCircuit(providers, record.contractAddress, "setAgentPolicy", [hex32ToBytes(agentId)], {
+          compiledAssetsPath: zkConfigPath,
+        });
+        if (policy.status !== MIDNIGHT_SUCCESS_STATUS) {
+          throw new Error("setAgentPolicy failed");
+        }
+        console.log(`setAgentPolicy: ${policy.status}`);
+      }
+
+      const invalidAmount = (privateState.perActionLimit || 25_000n) + 1n;
+      const indexerHttp = resolveIndexerHttpUrl(config);
+      let now = await fetchIndexerNowSeconds(indexerHttp);
+      let window = authorizationWindowFromLedger(now);
+      const windowSafetySeconds = 15n * 60n;
+      while (!windowIsSafeToSubmit(window, now, windowSafetySeconds)) {
+        console.log("Waiting for a safe Compact authorization window...");
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+        now = await fetchIndexerNowSeconds(indexerHttp);
+        window = authorizationWindowFromLedger(now);
+      }
+      const invalidPreview = previewAuthorize({
+        amount: invalidAmount,
+        vendorId,
+        privateState,
+        window,
+      });
+      if (invalidPreview.allowed) {
+        throw new Error("invalid authorize preview was expected to refuse");
+      }
+      console.log(`invalid authorizeAction refused locally: ${invalidPreview.code}`);
+
+      const intent: PaymentIntent = {
+        type: "PAYMENT",
+        agentId,
+        recipientLabel: recipient,
+        amount: 1_000n,
+        reason: "preview-valid-authorize",
+        actionId: newActionId(),
+      };
+      const authorized = await authorizePayment({
+        providers,
+        contractAddress: record.contractAddress,
+        organizationId: asHex32(record.organizationId),
+        intent,
+        privateState,
+        vendorId,
+        nowSeconds: now,
+        window,
+        confirmTimeoutMs: 180_000,
+        confirmPollMs: 3_000,
+        compiledAssetsPath: zkConfigPath,
+      });
+      if (authorized.outcome.kind !== "authorized" || !authorized.submitted) {
+        const extra =
+          authorized.outcome.kind === "rejected"
+            ? ` ${authorized.outcome.code}`
+            : authorized.txId
+              ? ` ${authorized.txId}`
+              : "";
+        throw new Error(
+          `authorizeAction did not confirm on the indexer (${authorized.outcome.kind}${extra}${authorized.circuitAssert ? ` assert=${authorized.circuitAssert}` : ""}${authorized.debugNote ? ` note=${authorized.debugNote}` : ""}${authorized.publicError ? `: ${authorized.publicError}` : ""})`,
+        );
+      }
+      privateState = authorized.nextPrivateState;
+      writePrivateStateExport(repoRoot, privateState);
+      const evidencePath = path.join(repoRoot, "deployment.authorize.json");
+      writeFileSync(
+        evidencePath,
+        `${JSON.stringify(
+          {
+            network: config.networkId,
+            contractAddress: record.contractAddress,
+            organizationId: record.organizationId,
+            actionId: intent.actionId,
+            txId: authorized.outcome.txId,
+            status: MIDNIGHT_SUCCESS_STATUS,
+            createdAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      console.log(`authorizeAction: ${MIDNIGHT_SUCCESS_STATUS}`);
+      console.log(`action id: ${intent.actionId}`);
+      if (authorized.txId) console.log(`tx: ${authorized.txId}`);
       return record;
     }
 
@@ -348,7 +483,10 @@ export async function runPreviewDeploy(
     console.log(`registerMember: ${record.registerMemberStatus}`);
     return record;
   } finally {
-    await wallet.stop().catch(() => undefined);
+    await Promise.race([
+      wallet.stop().catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 15_000)),
+    ]);
   }
 }
 

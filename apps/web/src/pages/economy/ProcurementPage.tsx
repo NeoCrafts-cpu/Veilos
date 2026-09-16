@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
+import { DeskStats } from "../../components/DeskStats.js";
 import { FormField } from "../../components/FormField.js";
 import { MaskedValue } from "../../components/MaskedValue.js";
 import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
-import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
+import { Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { validatePolicyAmount } from "../../lib/validation.js";
@@ -20,7 +21,6 @@ export function ProcurementPage() {
     busy,
     lastResult,
     ledgerError,
-    deployProcurement,
     registerBidder,
     createProcurement,
     submitBid,
@@ -47,38 +47,29 @@ export function ProcurementPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Sealed procurement"
-        objective="Bids are salted commitments. Losing amounts stay off the public ledger. An award cannot settle without a treasury authorization on economy-preview."
+        compact
+        title="Bids"
+        objective="Suppliers submit sealed bids. Losing amounts stay private. An award cannot settle without a matching treasury authorization."
+      />
+      <DeskStats
+        items={[
+          { label: "Bidders", value: procurement?.bidderCount.toString() ?? "0" },
+          { label: "Lots", value: procurement?.procurementCount.toString() ?? "0" },
+          { label: "Bids", value: String(procurement?.bidCommitments.length ?? 0) },
+        ]}
+        onRefresh={() => void refreshLedgers()}
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
-      <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta
-          label="procurement-preview"
-          address={contracts.procurement}
-          onDeploy={() => void deployProcurement()}
-          busy={busy}
-        />
-        <article className="card blue">
-          <h2>Public lots</h2>
-          <p>Bidders {procurement?.bidderCount.toString() ?? "0"}</p>
-          <p>Lots {procurement?.procurementCount.toString() ?? "0"}</p>
-          <p>Bid commitments {procurement?.bidCommitments.length ?? 0}</p>
-          <Button type="button" variant="secondary" onClick={() => void refreshLedgers()}>
-            Refresh indexer
-          </Button>
-        </article>
-      </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.procurement} ownerSecret={vault.procurementOwnerSecret}>
-        <div id="task-bidders" className="row" style={{ marginTop: 24 }}>
-          <Button type="button" loading={busy} onClick={() => void registerBidder()}>
-            Register bidder
-          </Button>
-        </div>
+      <Wave2Gate
+        contractAddress={contracts.procurement}
+        ownerSecret={vault.procurementOwnerSecret}
+        idleTitle="Inspect bids"
+        idleBody="Fill the form. Writes wait until bidding is live for this organization."
+      >
         <form
           id="task-lots"
-          className="form card"
-          style={{ marginTop: 24 }}
+          className="form card desk-form"
           onSubmit={(event) => {
             event.preventDefault();
             void createProcurement({ durationSeconds: Number(duration) || 300 });
@@ -92,9 +83,14 @@ export function ProcurementPage() {
             value={duration}
             onChange={(event) => setDuration(event.target.value)}
           />
-          <Button loading={busy} loadingLabel="Proving createProcurement">
-            Create on Midnight
-          </Button>
+          <div className="row" id="task-bidders" style={{ marginTop: 12 }}>
+            <Button loading={busy} loadingLabel="Proving createProcurement">
+              Create on Midnight
+            </Button>
+            <Button type="button" variant="secondary" loading={busy} onClick={() => void registerBidder()}>
+              Register bidder
+            </Button>
+          </div>
         </form>
         <form
           id="task-bids"
@@ -178,10 +174,10 @@ export function ProcurementPage() {
           </label>
           <FormField
             id="treasury-action"
-            label="economy-preview action id"
+            label="Treasury authorization"
             value={treasuryActionId}
             onChange={(event) => setTreasuryActionId(event.target.value)}
-            hint="Must already exist on the economy-preview authorizations map. Compact 0.23 cannot look up another contract."
+            hint="Must already be an authorized treasury payment. An award cannot settle without it."
           />
           <Button disabled={!winnerBidCommitment} loading={busy} loadingLabel="Proving awardProcurement">
             Award on Midnight

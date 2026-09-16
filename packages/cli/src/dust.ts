@@ -74,6 +74,10 @@ export async function waitForSyncedState(wallet: WalletFacade) {
   return firstValueFrom(wallet.state().pipe(filter((state) => Boolean(state.isSynced))));
 }
 
+export async function readCurrentWalletState(wallet: WalletFacade) {
+  return firstValueFrom(wallet.state());
+}
+
 export async function waitForNightBalance(
   wallet: WalletFacade,
   readBalance: (state: unknown) => bigint,
@@ -96,11 +100,28 @@ export async function waitForDustReady(wallet: WalletFacade, timeoutMs: number):
   await firstValueFrom(
     wallet.state().pipe(
       throttleTime(5_000),
-      filter((state) => Boolean(state.isSynced)),
       filter((state) => isDustReady(state.dust)),
       timeout({
-        each: timeoutMs,
+        first: timeoutMs,
         with: () => throwError(() => new Error("no spendable DUST yet")),
+      }),
+    ),
+  );
+}
+
+/** Proceed as soon as tNIGHT + DUST are visible. Do not wait for a full merkle catch-up. */
+export async function waitForSpendableFunds(
+  wallet: WalletFacade,
+  readNight: (state: unknown) => bigint,
+  timeoutMs: number,
+): Promise<unknown> {
+  return firstValueFrom(
+    wallet.state().pipe(
+      throttleTime(5_000),
+      filter((state) => readNight(state) > 0n && isDustReady(state.dust)),
+      timeout({
+        first: timeoutMs,
+        with: () => throwError(() => new Error(`spendable funds not visible after ${timeoutMs}ms`)),
       }),
     ),
   );
@@ -110,6 +131,10 @@ export async function registerNightForDust(
   wallet: WalletFacade,
   unshieldedKeystore: UnshieldedKeystore,
 ): Promise<"already" | "submitted"> {
+  const current = await readCurrentWalletState(wallet);
+  if (isDustReady(current.dust)) {
+    return "already";
+  }
   const state = await waitForSyncedState(wallet);
   if (isDustReady(state.dust)) {
     return "already";

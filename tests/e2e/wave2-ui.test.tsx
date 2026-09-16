@@ -36,14 +36,14 @@ describe("Wave 2 economy UI", () => {
 
   it("exposes real credential and treasury circuit actions", () => {
     const creds = renderAt("/app/credentials");
-    expect(creds.container.textContent).toMatch(/Issue on Midnight|Connect a Midnight wallet|Unlock the operator vault/i);
+    expect(creds.container.textContent).toMatch(/Issue credential|Connect a Midnight wallet|Unlock this organization/i);
     expect(creds.container.textContent).not.toMatch(/AUTHORIZATION RECORDED/);
     cleanup();
     const treasury = renderAt("/app/treasury");
-    expect(treasury.container.textContent).toMatch(/Prove authorization|Connect a Midnight wallet|Unlock the operator vault/i);
+    expect(treasury.container.textContent).toMatch(/Authorize payment|Connect a Midnight wallet|Unlock this organization/i);
     cleanup();
     const gov = renderAt("/app/governance");
-    expect(gov.container.textContent).toMatch(/Create on Midnight|Deploy on Preview|Connect a Midnight wallet/i);
+    expect(gov.container.textContent).toMatch(/Create on Midnight|Voting is not open yet|Connect a Midnight wallet/i);
     cleanup();
     const docs = renderAt("/docs");
     expect(docs.container.textContent).toMatch(/Fail-closed/i);
@@ -53,7 +53,7 @@ describe("Wave 2 economy UI", () => {
   it("keeps Wave 2 write controls behind wallet, vault, and owner-secret gates", () => {
     const creds = renderAt("/app/credentials/issue");
     expect(creds.container.textContent).toMatch(/Connect a Midnight wallet/i);
-    expect(creds.container.textContent).toMatch(/Published Preview|read-only|Deploy/i);
+    expect(creds.container.textContent).toMatch(/view-only|Unlock this organization|Connect a Midnight wallet/i);
     expect(creds.container.textContent).not.toMatch(/ownerSecret|holderSecret/);
     expect(screen.getByRole("navigation", { name: /primary/i })).toBeTruthy();
   });

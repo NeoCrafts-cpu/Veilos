@@ -1,38 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { shortAddress } from "../lib/format.js";
 import { readSidebarHidden, writeSidebarHidden } from "../lib/workspace.js";
 import { useSession } from "../state/session.js";
 import { Banner } from "./Banner.js";
 import { RouteAnnouncer } from "./RouteAnnouncer.js";
 import { Sidebar } from "./Sidebar.js";
 import { SkipLink } from "./SkipLink.js";
+import { WalletStatus } from "./WalletStatus.js";
 
 const BUSY_COPY: Record<string, string> = {
-  createAgent: "Creating the agent on Midnight. Keep this tab open and approve the wallet popup.",
-  payment: "Authorizing the request on Midnight. Approve the wallet popup if it appears.",
-  deploy: "Deploying the organization on Midnight. Keep this tab open.",
-  policy: "Updating the private policy commitment. Approve the wallet popup if it appears.",
-  join: "Reconnecting the operator session to the contract.",
-  refresh: "Refreshing public organization data from the indexer.",
-  connect: "Connecting the Midnight wallet.",
-  vault: "Protecting operator access.",
-  economy: "Submitting a Wave 2 economy circuit. Approve the wallet popup if it appears.",
-  governance: "Submitting a governance circuit. Approve the wallet popup if it appears.",
-  procurement: "Submitting a procurement circuit. Approve the wallet popup if it appears.",
-  auditor: "Recording a disclosure grant on Midnight.",
+  createAgent: "Creating the agent. Keep this tab open and approve the wallet popup.",
+  payment: "Authorizing. Approve the wallet popup if it appears. Keep this tab open.",
+  deploy: "Setting up the organization. Keep this tab open.",
+  policy: "Updating the private policy. Approve the wallet popup if it appears.",
+  join: "Opening the organization.",
+  refresh: "Refreshing public data.",
+  connect: "Connecting wallet…",
+  vault: "Unlocking organization access.",
+  economy: "Updating treasury. Approve the wallet popup if it appears.",
+  governance: "Recording a vote. Approve the wallet popup if it appears.",
+  procurement: "Recording a bid. Approve the wallet popup if it appears.",
+  auditor: "Recording an auditor grant.",
 };
 
 export function Shell() {
-  const {
-    wallet,
-    connectWallet,
-    disconnectWallet,
-    walletError,
-    ledgerError,
-    busyAction,
-    walletReconnectNeeded,
-  } = useSession();
+  const { walletError, ledgerError, busyAction, walletReconnectNeeded, wallet } = useSession();
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -88,19 +80,11 @@ export function Shell() {
             </button>
           ) : null}
           <div className="nav-tools">
-            {wallet ? (
-              <button type="button" className="btn ghost wallet-chip" onClick={disconnectWallet}>
-                {wallet.unshieldedAddress ? shortAddress(wallet.unshieldedAddress) : "Disconnect"}
-              </button>
-            ) : (
-              <button type="button" className="btn" onClick={() => void connectWallet()}>
-                {busyAction === "connect" ? "Connecting…" : walletReconnectNeeded ? "Reconnect wallet" : "Connect wallet"}
-              </button>
-            )}
+            <WalletStatus />
           </div>
         </header>
         {walletReconnectNeeded && !wallet ? (
-          <Banner tone="info">Wallet session ended. Reconnect the Midnight wallet to prove and submit. Connection is not claimed until the connector confirms it.</Banner>
+          <Banner tone="info">Wallet disconnected. Reconnect to continue.</Banner>
         ) : null}
         {busyAction !== "idle" && BUSY_COPY[busyAction] ? (
           <Banner tone="info">{BUSY_COPY[busyAction]}</Banner>

@@ -17,12 +17,12 @@ export type PublishedDeployment = {
 
 export const PREVIEW_DEPLOYMENT: PublishedDeployment = {
   network: "preview",
-  contractAddress: "0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02",
+  contractAddress: "4b31d10bf6aba347cc0f041856488fa07cfe2604db7a4b1d432123c277a9e64b",
   organizationId: asHex32("84325409dceb448a816ea6dbf96829c207488738ff6c7d4ac1276cae19464cab"),
   organizationName: "ACME AUTONOMOUS SYSTEMS",
   memberId: asHex32("942d796fe7fc58717b191197a0b81a6331fd7d74c9d4ee1b2efb88e07f19ab3c"),
   memberLabel: "FOUNDING-MEMBER",
-  createdAt: "2026-09-13T13:22:03.482Z",
+  createdAt: "2026-09-20T17:21:17.648Z",
 };
 
 export type PublishedEconomyDeployment = {
@@ -38,11 +38,11 @@ export type PublishedEconomyDeployment = {
 export const PREVIEW_ECONOMY_DEPLOYMENT: PublishedEconomyDeployment = {
   network: "preview",
   contractKind: "economy-preview",
-  contractAddress: "0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f",
+  contractAddress: "bb910a795fe4bea70af422038ce303ce6cee7e1133f32f021380f221a849e4df",
   organizationId: asHex32("84325409dceb448a816ea6dbf96829c207488738ff6c7d4ac1276cae19464cab"),
   organizationName: "ACME AUTONOMOUS SYSTEMS",
-  deployTxId: "00a858c27854e88af1c7d9b0d8556c6ce2c30b6dfc237aa79dce45981fcc8d1e2b",
-  createdAt: "2026-09-16T01:14:30.761Z",
+  deployTxId: "005e082246788ba1b2215a91ddc9987a480c218e16c494b5667af6e11342235634",
+  createdAt: "2026-09-20T17:57:49.048Z",
 };
 
 export function publishedDeploymentFor(networkId: string): PublishedDeployment | null {

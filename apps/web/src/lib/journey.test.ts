@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 import { deriveCurrentTask } from "./journey.js";
 
 describe("current task", () => {
-  it("asks unset users to choose a path", () => {
+  it("sends a live organization to the payment request", () => {
     const task = deriveCurrentTask({
-      mode: "unset",
+      mode: "preview",
       wallet: false,
       match: "none",
       vault: "missing",
       actions: [],
+      agent: { status: "active" } as never,
     });
-    expect(task.primary.to).toBe("/app/setup");
-    expect(task.secondary?.to).toBe("/app/preview");
+    expect(task.primary.to).toBe("/app/authorize/new");
+    expect(task.primary.label).toMatch(/payment/i);
   });
 
   it("sends a verified owner to authorize", () => {
@@ -24,6 +25,6 @@ describe("current task", () => {
       agent: { status: "active" } as never,
     });
     expect(task.primary.to).toBe("/app/authorize/new");
-    expect(task.body).toMatch(/does not transfer funds/i);
+    expect(task.body).toMatch(/private policy/i);
   });
 });

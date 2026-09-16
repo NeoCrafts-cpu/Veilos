@@ -17,6 +17,7 @@ export function AuthorizeReviewPage() {
     publicStore,
     dustReady,
     networkLive,
+    connectWallet,
     wallet,
     selectedAgentId,
     canOperate,
@@ -34,8 +35,8 @@ export function AuthorizeReviewPage() {
 
   return (
     <JourneyLayout
-      title="Review authorization"
-      objective="Confirm private inputs and public consequences before proving. No funds are transferred."
+      title="Review this request"
+      objective="Confirm what stays private before proving. No funds are transferred."
       steps={AUTH_STEPS}
       current={1}
       actions={
@@ -66,9 +67,9 @@ export function AuthorizeReviewPage() {
           { label: "Reason", value: authDraft.reason },
         ]}
         publicItems={[
-          { label: "Action type", value: "payment" },
-          { label: "Agent id", value: agent?.agentId ?? "—" },
-          { label: "Result if successful", value: "authorized" },
+          { label: "Type", value: "payment" },
+          { label: "Agent", value: "TREASURY-01" },
+          { label: "If allowed", value: "authorized" },
           { label: "Funds transferred", value: "None" },
         ]}
       />
@@ -82,18 +83,21 @@ export function AuthorizeReviewPage() {
       ) : null}
       {!agent || !canOperate ? (
         <RecoveryPanel
-          title="Operator context is not ready"
-          body="Select an on-chain agent and unlock the vault that opens its commitments before submitting."
+          title="Unlock this organization to authorize"
+          body="Select the live agent and unlock organization access before submitting."
         >
-          <Button to="/app/org">Open organization</Button>
+          <Button to="/app/org">Members & access</Button>
         </RecoveryPanel>
       ) : null}
       {!wallet ? (
         <RecoveryPanel
           title="Connect a Midnight wallet"
-          body="The wallet signs and pays DUST. Veilos does not submit until the connector confirms the session."
+          body="The wallet signs the request. Veilos never asks for a recovery phrase."
+          role="status"
         >
-          <Button to="/app/setup">Check readiness</Button>
+          <Button type="button" onClick={() => void connectWallet()}>
+            Connect wallet
+          </Button>
         </RecoveryPanel>
       ) : null}
       {dustReady === false ? <p className="footer-note">This wallet has no spendable DUST yet.</p> : null}

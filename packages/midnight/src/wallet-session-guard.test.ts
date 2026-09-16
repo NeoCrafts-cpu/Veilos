@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { PREVIEW_CONFIG } from "./network.js";
 import {
   assertWalletSessionCurrent,
+  shouldInvalidateWalletSessionAfterErrors,
+  WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE,
   type WalletSessionReader,
 } from "./wallet-session-guard.js";
 
@@ -34,6 +36,27 @@ function session(overrides: {
 describe("wallet transaction session guard", () => {
   it("accepts the connected account on the configured network", async () => {
     await expect(assertWalletSessionCurrent(session(), PREVIEW_CONFIG, "coin-key")).resolves.toBeUndefined();
+  });
+
+  it("does not invalidate the session while a prove/submit is in flight", () => {
+    expect(
+      shouldInvalidateWalletSessionAfterErrors({
+        consecutiveErrors: WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE,
+        transactionInFlight: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldInvalidateWalletSessionAfterErrors({
+        consecutiveErrors: 2,
+        transactionInFlight: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldInvalidateWalletSessionAfterErrors({
+        consecutiveErrors: WALLET_SESSION_CONSECUTIVE_ERRORS_TO_INVALIDATE,
+        transactionInFlight: false,
+      }),
+    ).toBe(true);
   });
 
   it("fails closed after disconnect, network switch, or account switch", async () => {

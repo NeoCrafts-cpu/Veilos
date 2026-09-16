@@ -9,11 +9,11 @@
 | 2 | Compact core | **Done** (`packages/contracts/compact/authorization.compact`, Compact 0.31 / language 0.23; 8 ledger circuits compiled locally) |
 | 3 | Contract tests | **Done** (C1–C31 against the Compact semantics replica, plus X5 parity against the real generated module; compile test skips if `compact` missing) |
 | 4 | MidnightJS / wallet / proof / indexer | **Done** (official 4.1.1 adapters + DApp Connector v4 + browser `MidnightProviders`) |
-| 5 | Real end-to-end transaction | **Partial on Preview** — deploy + registerMember `SucceedEntirely`. `authorizeAction` indexer evidence is not retained yet (`docs/preview-evidence.md`). Local I1–I7 are real when Midnight is required. |
+| 5 | Real end-to-end transaction | **Partial on Preview** — deploy + registerMember `SucceedEntirely`. `authorizeAction` indexer evidence is not retained yet (`docs/preview-evidence.md`). Remaining live writes are operator-manual (UI + wallet), not CLI-automated. Local I1–I7 are real when Midnight is required. |
 | 6 | Wave 1 UI | **Done** — owner vs public Preview journeys; guided setup/policy/authorization; public fields from indexer; circuit calls via MidnightJS |
 | 7 | Privacy Inspector | **Done** |
 | 8 | Security + QA | **Updated** — exact indexer finality, encrypted journal, encrypted browser private state, Node 22 CI |
-| 9 | Demo + README + submission | **Deck, rubric map, business, community copy in-repo.** **YouTube + X posts still required** — `docs/DEMO-SCRIPT.md`, `docs/COMMUNITY.md`. |
+| 9 | Demo + README + submission | **Deck, rubric map, business, community copy in-repo.** **YouTube + X posts still required** — `docs/DEMO-SCRIPT.md`, `docs/COMMUNITY.md`. Hosted UI at `https://veilos-web-ten.vercel.app` currently serves git `136c61f` (`velios-build=136c61f2c67d`). |
 
 ## Wave 2 — VELIOS ECONOMY
 

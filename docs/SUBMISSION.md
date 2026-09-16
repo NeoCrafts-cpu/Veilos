@@ -24,7 +24,7 @@ This Wave ships a complete operator OS on Midnight: private agent authorization 
 | MidnightJS | Official 4.1.1 `deployContract` / `submitCallTx` / indexer / proof-server / DApp Connector v4 |
 | UI | Setup, org, agent policy, authorize, credentials, treasury, governance, procurement, auditor, Privacy Inspector |
 | QA | C1–C31 replica + generated-module parity; package tests; CI on Node 22 |
-| Preview | Authorization `0787a191…8e02` and economy-preview `0b4a8d7e…7c8f` deployed `SucceedEntirely` |
+| Preview | Authorization `4b31d10b…e64b` and economy-preview `bb910a79…e4df` deployed `SucceedEntirely` |
 
 ## What changed since a previous Wave
 

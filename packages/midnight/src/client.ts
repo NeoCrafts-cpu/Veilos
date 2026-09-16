@@ -28,7 +28,13 @@ import { organizationIdFromName, PRIVATE_STATE_ID } from "./ids.js";
 import { waitForPublicAction } from "./indexer-confirm.js";
 import { readPublicLedger, type LedgerProviders } from "./join.js";
 import { writeJoinedPrivateState } from "./private-state-store.js";
-import { outcomeFromCaughtError, outcomeFromIndexerConfirm, outcomeFromTxStatus } from "./status.js";
+import {
+  circuitAssertFromError,
+  explainCaughtError,
+  outcomeFromCaughtError,
+  outcomeFromIndexerConfirm,
+  outcomeFromTxStatus,
+} from "./status.js";
 
 export { PRIVATE_STATE_ID };
 
@@ -154,12 +160,16 @@ export async function authorizePayment(input: {
   nextSpendSalt?: Uint8Array;
   confirmTimeoutMs?: number;
   confirmPollMs?: number;
+  compiledAssetsPath?: string;
 }): Promise<{
   outcome: AuthorizationOutcome;
   nextPrivateState: VeliosPrivateState;
   window: AuthorizationWindow;
   txId?: string;
   submitted: boolean;
+  publicError?: string;
+  circuitAssert?: string;
+  debugNote?: string;
 }> {
   const now = input.nowSeconds ?? nowSeconds();
   const window = input.window ?? currentAuthorizationWindow(() => Number(now) * 1000);
@@ -194,6 +204,7 @@ export async function authorizePayment(input: {
         window.periodStart,
         window.periodEnd,
       ],
+      input.compiledAssetsPath ? { compiledAssetsPath: input.compiledAssetsPath } : undefined,
     );
     const submitted = outcomeFromTxStatus({
       status,
@@ -236,11 +247,17 @@ export async function authorizePayment(input: {
       submitted: true,
     };
   } catch (error) {
+    const raw = error instanceof Error ? error.message : "authorizeAction failed";
+    const debugNote = /[0-9a-f]{64}/i.test(raw) ? undefined : raw.slice(0, 280);
+    const circuitAssert = circuitAssertFromError(error);
     return {
       outcome: outcomeFromCaughtError(error),
       nextPrivateState: input.privateState,
       window,
       submitted: false,
+      publicError: explainCaughtError(error, "authorizeAction failed"),
+      ...(circuitAssert ? { circuitAssert } : {}),
+      ...(debugNote ? { debugNote } : {}),
     };
   }
 }
