@@ -47,3 +47,26 @@ export function validateReason(value: string): string | undefined {
   if (utf8ByteLength(trimmed) > 200) return "Reason must be 200 bytes or fewer.";
   return undefined;
 }
+
+export type AuthorizationDraftValidation = {
+  recipient?: string;
+  amount?: string;
+  reason?: string;
+  parsedAmount?: bigint;
+};
+
+export function validateAuthorizationDraft(input: {
+  recipient: string;
+  amount: string;
+  reason: string;
+}): AuthorizationDraftValidation {
+  const parsed = validatePolicyAmount(input.amount, "Amount");
+  const recipient = input.recipient.trim() ? undefined : "Recipient is required.";
+  const reason = validateReason(input.reason);
+  return {
+    ...(recipient ? { recipient } : {}),
+    ...(parsed.error ? { amount: parsed.error } : {}),
+    ...(reason ? { reason } : {}),
+    ...(parsed.amount !== undefined ? { parsedAmount: parsed.amount } : {}),
+  };
+}

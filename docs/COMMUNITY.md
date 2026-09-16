@@ -17,7 +17,7 @@ The chain sees the proof. Not the secret.
 AUTHORIZED is SucceedEntirely + the indexer row. Never a guessed number.
 
 3/ Try the public org (no wallet):
-https://veilos-web.vercel.app
+https://veilos-web-ten.vercel.app
 
 Repo (topic midnightntwrk, Apache 2.0):
 https://github.com/NeoCrafts-cpu/Veilos
@@ -30,7 +30,7 @@ Compact compiles. That is the technical gate.
 
 Veilos is a privacy-native OS for autonomous orgs. Compact commits the policy; witnesses never hit the public ledger; the Privacy Inspector shows the split.
 
-Live UI: https://veilos-web.vercel.app
+Live UI: https://veilos-web-ten.vercel.app
 Contracts (Preview): authorization `0787a191…8e02`, economy-preview `0b4a8d7e…7c8f`
 Repo: https://github.com/NeoCrafts-cpu/Veilos
 
@@ -42,5 +42,5 @@ Autonomous agents need budgets. Public chains leak those budgets.
 
 We built Veilos on Midnight so an organization can prove an agent followed policy without publishing the policy.
 
-Demo: https://veilos-web.vercel.app
+Demo: https://veilos-web-ten.vercel.app
 GitHub: https://github.com/NeoCrafts-cpu/Veilos

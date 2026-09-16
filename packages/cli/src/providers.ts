@@ -9,6 +9,7 @@ import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config
 import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import type { NetworkConfig } from "@velios/midnight";
 import type { MidnightWalletProvider } from "./wallet.js";
+import { resolvePrivateStorePassword } from "./private-store-password.js";
 
 export function buildCliProviders(
   wallet: MidnightWalletProvider,
@@ -18,7 +19,7 @@ export function buildCliProviders(
 ): MidnightProviders {
   const zkConfigProvider = new NodeZkConfigProvider(zkConfigPath);
   const accountId = wallet.getCoinPublicKey();
-  const password = process.env["VELIOS_PRIVATE_STORE_PASSWORD"] ?? `${String(accountId)}!`;
+  const password = resolvePrivateStorePassword(process.env, String(accountId));
   return {
     privateStateProvider: levelPrivateStateProvider({
       privateStateStoreName: options?.privateStateStoreName ?? "velios-authorization",

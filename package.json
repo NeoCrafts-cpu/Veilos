@@ -15,6 +15,7 @@
     "dev": "pnpm --filter @velios/web dev",
     "build": "pnpm --filter @velios/web build",
     "test": "pnpm -r --if-present test",
+    "test:e2e": "playwright test",
     "compile:contracts": "pnpm --filter @velios/contracts compile",
     "compile:economy": "pnpm --filter @velios/contracts compile:economy",
     "compile:economy-preview": "pnpm --filter @velios/contracts compile:economy-preview",
@@ -30,6 +31,7 @@
     "lint": "echo \"Typecheck via package tests. Compact: pnpm compile:contracts\""
   },
   "devDependencies": {
+    "@playwright/test": "1.55.0",
     "@types/node": "^22.15.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

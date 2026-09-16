@@ -49,4 +49,12 @@ describe("Wave 2 economy UI", () => {
     expect(docs.container.textContent).toMatch(/Fail-closed/i);
     expect(docs.container.textContent).toMatch(/economy-preview\.compact/i);
   });
+
+  it("keeps Wave 2 write controls behind wallet, vault, and owner-secret gates", () => {
+    const creds = renderAt("/app/credentials/issue");
+    expect(creds.container.textContent).toMatch(/Connect a Midnight wallet/i);
+    expect(creds.container.textContent).toMatch(/Published Preview|read-only|Deploy/i);
+    expect(creds.container.textContent).not.toMatch(/ownerSecret|holderSecret/);
+    expect(screen.getByRole("navigation", { name: /primary/i })).toBeTruthy();
+  });
 });

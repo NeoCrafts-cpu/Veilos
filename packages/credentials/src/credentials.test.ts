@@ -48,8 +48,21 @@ describe("organization-issued credentials", () => {
         revoked: [...registry.revoked].map((hex) => Buffer.from(hex, "hex")),
       }),
     ).toEqual({ ok: false, code: "revoked" });
-    expect(revocationNullifier(issued.commitment, new Uint8Array(32).fill(9))).not.toEqual(issued.revocationNullifier);
+    expect(revocationNullifier(issued.commitment)).toEqual(issued.revocationNullifier);
+    expect(revocationNullifier(issued.commitment)).toEqual(revocationNullifier(issued.commitment));
     expect(holderCommitment(holderSecret)).toHaveLength(32);
+    expect(
+      credentialCommitment({
+        holderSecret,
+        organizationId: org,
+        className: "treasury",
+        expiry: 2_000_000_000n,
+        salt,
+        vendorId: new Uint8Array(32).fill(2),
+        perActionLimit: 100n,
+        dailyLimit: 200n,
+      }),
+    ).not.toEqual(issued.commitment);
   });
 
   it("encrypts credential bodies", async () => {

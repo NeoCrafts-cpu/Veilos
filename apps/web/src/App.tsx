@@ -23,6 +23,7 @@ import { ProcurementPage } from "./pages/economy/ProcurementPage.js";
 import { SettlementReviewPage } from "./pages/economy/SettlementReviewPage.js";
 import { TreasuryPage } from "./pages/economy/TreasuryPage.js";
 import { DocsPage } from "./pages/docs/DocsPage.js";
+import { NotFoundPage } from "./pages/NotFoundPage.js";
 import { Shell } from "./components/Shell.js";
 import { useSession } from "./state/session.js";
 
@@ -38,8 +39,9 @@ function RedirectLegacyProof() {
 function RedirectLegacyAgent() {
   const { agentId } = useParams();
   const { selectedContract, publicStore } = useSession();
-  const contract = selectedContract ?? publicStore.contractAddress ?? "current";
+  const contract = selectedContract ?? publicStore.contractAddress;
   if (agentId === "new") return <Navigate to="/app/org/agent/new" replace />;
+  if (!contract) return <Navigate to="/app/org" replace />;
   return <Navigate to={`/app/org/${contract}/agent/${agentId}`} replace />;
 }
 
@@ -63,6 +65,7 @@ export function App() {
         <Route path="actions/:actionId/proof" element={<RedirectLegacyProof />} />
         <Route path="actions/:actionId/privacy" element={<PrivacyPage />} />
         <Route path="actions/:actionId" element={<ResultPage />} />
+        <Route path="org/agents" element={<OrganizationPage />} />
         <Route path="org/agent/new" element={<AgentPolicyPage />} />
         <Route path="org/agent/new/review" element={<AgentPolicyPage />} />
         <Route path="org/agent/new/success" element={<AgentPolicyPage />} />
@@ -77,16 +80,29 @@ export function App() {
         <Route path="org" element={<OrganizationPage />} />
         <Route path="privacy" element={<PrivacyPage />} />
         <Route path="credentials" element={<CredentialsPage />} />
+        <Route path="credentials/issue" element={<CredentialsPage />} />
+        <Route path="credentials/registry" element={<CredentialsPage />} />
         <Route path="treasury" element={<TreasuryPage />} />
+        <Route path="treasury/deposit" element={<TreasuryPage />} />
+        <Route path="treasury/authorize" element={<TreasuryPage />} />
         <Route path="treasury/settle" element={<SettlementReviewPage />} />
         <Route path="governance" element={<GovernancePage />} />
+        <Route path="governance/voters" element={<GovernancePage />} />
+        <Route path="governance/proposals" element={<GovernancePage />} />
+        <Route path="governance/ballots" element={<GovernancePage />} />
         <Route path="procurement" element={<ProcurementPage />} />
+        <Route path="procurement/bidders" element={<ProcurementPage />} />
+        <Route path="procurement/lots" element={<ProcurementPage />} />
+        <Route path="procurement/bids" element={<ProcurementPage />} />
         <Route path="auditor" element={<AuditorPage />} />
+        <Route path="auditor/grants" element={<AuditorPage />} />
+        <Route path="auditor/anchors" element={<AuditorPage />} />
         <Route path="docs" element={<Navigate to="/docs" replace />} />
         <Route path="agents/:agentId/action" element={<RedirectAgentAction />} />
         <Route path="agents/:agentId" element={<RedirectLegacyAgent />} />
+        <Route path="*" element={<NotFoundPage inWorkspace />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

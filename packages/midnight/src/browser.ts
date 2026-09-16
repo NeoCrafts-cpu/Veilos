@@ -56,6 +56,7 @@ export async function connectBrowserWallet(
       "getUnshieldedAddress",
       "getDustBalance",
       "getConfiguration",
+      "getProvingProvider",
       "balanceUnsealedTransaction",
       "submitTransaction",
     ]);

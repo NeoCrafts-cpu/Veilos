@@ -30,7 +30,7 @@ A token-only Midnight integration would be a transfer. Veilos authorizes first. 
 
 ## Go-to-market (post-hackathon)
 
-1. **Now — Preview demo.** Hosted UI at https://veilos-web.vercel.app. Judges and operators explore the public Preview org without a wallet. Circuit calls require Lace / 1AM + local proving.
+1. **Now — Preview demo.** Hosted UI at https://veilos-web-ten.vercel.app. Judges and operators explore the public Preview org without a wallet. Circuit calls require Lace / 1AM with wallet Proof Station, or a local proof server.
 2. **Next — operator deploy.** `pnpm deploy:preview` (or later Preprod) creates *their* organization Compact instance. Vault backup is the onboarding artifact, not a seed phrase in chat.
 3. **Then — design-partner orgs.** 3–5 agent-operated treasuries (research DAOs, procurement desks, internal AI ops). Success = one authorize + one settle they will show an auditor.
 4. **Later — protocol surface.** Developer API / CLI already started (`packages/cli`). Wave 3 (marketplace, credit) stays closed until Preview authorize + settle evidence is retained.

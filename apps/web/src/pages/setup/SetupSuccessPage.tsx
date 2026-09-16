@@ -7,7 +7,7 @@ import { useSession } from "../../state/session.js";
 
 export function SetupSuccessPage() {
   useDocumentTitle("Organization created");
-  const { publicStore, busyAction, walletError, selectedContract } = useSession();
+  const { publicStore, busy, busyAction, walletError, selectedContract, refreshLedger } = useSession();
   const created = Boolean(publicStore.organization);
 
   if (busyAction === "deploy") {
@@ -25,9 +25,18 @@ export function SetupSuccessPage() {
     return (
       <div className="page">
         <RecoveryPanel
-          title="Organization was not deployed"
-          body={walletError ?? "Midnight did not return a confirmed organization. Encrypted operator state is still on this device."}
+          title={selectedContract ? "Waiting for indexer confirmation" : "Organization was not deployed"}
+          body={
+            selectedContract
+              ? "A contract address exists locally, but the public organization record is not confirmed on the indexer yet. Do not redeploy while confirmation is pending."
+              : walletError ?? "Midnight did not return a confirmed organization. Encrypted operator state is still on this device."
+          }
         >
+          {selectedContract ? (
+            <button type="button" className="btn" disabled={busy} onClick={() => void refreshLedger()}>
+              {busyAction === "refresh" ? "Checking indexer…" : "Check indexer again"}
+            </button>
+          ) : null}
           <Button to="/app/setup/review">Return to review</Button>
           <Button to="/app/setup" variant="secondary">
             Check readiness

@@ -11,6 +11,7 @@ import {
   currentAuthorizationWindow,
   nowSeconds,
   randomBytes32,
+  spendBucketMayOpen,
   windowIsSafeToSubmit,
   type AuthorizationWindow,
 } from "@velios/policy-engine";
@@ -106,7 +107,7 @@ export async function deployOrganization(
   } as never);
   const contractAddress = readContractAddress(deployed);
   const status = readTxStatus((deployed as { deployTxData?: unknown }).deployTxData);
-  if (status && status !== MIDNIGHT_SUCCESS_STATUS) {
+  if (status !== MIDNIGHT_SUCCESS_STATUS) {
     throw new Error("deploy failed");
   }
   if (!contractAddress) {
@@ -166,6 +167,13 @@ export async function authorizePayment(input: {
   try {
     if (!windowIsSafeToSubmit(window, now)) {
       return { outcome: { kind: "timeout" }, nextPrivateState: input.privateState, window, submitted: false };
+    }
+    const aligned = currentAuthorizationWindow(() => Number(now) * 1000);
+    if (window.periodStart !== aligned.periodStart || window.periodEnd !== aligned.periodEnd) {
+      return { outcome: { kind: "rejected", code: "policy_violation" }, nextPrivateState: input.privateState, window, submitted: false };
+    }
+    if (!spendBucketMayOpen(input.privateState.spendPeriodStart, window, now)) {
+      return { outcome: { kind: "rejected", code: "policy_violation" }, nextPrivateState: input.privateState, window, submitted: false };
     }
     await writeJoinedPrivateState(
       input.providers as Parameters<typeof writeJoinedPrivateState>[0],

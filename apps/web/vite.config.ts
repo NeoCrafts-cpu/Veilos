@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { createRequire } from "node:module";
@@ -102,7 +103,13 @@ function operatorPrivateStatePlugin(): Plugin {
       if (process.env.VELIOS_DEV_OPERATOR_STATE !== "1") {
         return;
       }
+      const token = process.env.VELIOS_DEV_OPERATOR_STATE_TOKEN;
       server.middlewares.use("/@velios-operator-state", (req, res) => {
+        if (!token || req.headers["x-velios-dev-token"] !== token) {
+          res.statusCode = 403;
+          res.end();
+          return;
+        }
         if (req.method === "GET") {
           if (!existsSync(exportPath)) {
             res.statusCode = 404;
@@ -154,6 +161,47 @@ function resolveFromWorkspaces(specifier: string): string {
 const onchainRuntime = path.dirname(resolveFromWorkspaces("@midnight-ntwrk/onchain-runtime-v3"));
 const protocolRequire = createRequire(resolveFromWorkspaces("@midnight-ntwrk/midnight-js-protocol"));
 
+function veliosBuildId(): string {
+  const fromEnv = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VITE_VELIOS_BUILD;
+  if (fromEnv) return fromEnv.slice(0, 12);
+  try {
+    return execSync("git rev-parse --short HEAD", {
+      cwd: webDir,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim()
+      .slice(0, 12);
+  } catch {
+    return "dev";
+  }
+}
+
+function veliosBuildPlugin(): Plugin {
+  const sha = veliosBuildId();
+  const builtAt = new Date().toISOString();
+  return {
+    name: "velios-build-info",
+    config() {
+      return {
+        define: {
+          "import.meta.env.VITE_VELIOS_BUILD": JSON.stringify(sha),
+          "import.meta.env.VITE_VELIOS_BUILT_AT": JSON.stringify(builtAt),
+          "import.meta.env.VITE_VELIOS_DEV_OPERATOR_STATE_TOKEN": JSON.stringify(
+            process.env.VELIOS_DEV_OPERATOR_STATE === "1" ? process.env.VELIOS_DEV_OPERATOR_STATE_TOKEN || "" : "",
+          ),
+        },
+      };
+    },
+    transformIndexHtml(html) {
+      return html.replace(
+        "</head>",
+        `    <meta name="velios-build" content="${sha}" />\n    <meta name="velios-built-at" content="${builtAt}" />\n  </head>`,
+      );
+    },
+  };
+}
+
 function resolveMidnightSpecifier(source: string): string | null {
   if (!source.startsWith("@midnight-ntwrk/")) return null;
   if (source === "@midnight-ntwrk/onchain-runtime-v3") {
@@ -191,6 +239,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    veliosBuildPlugin(),
     cjsPackageToEsmPlugin(),
     operatorPrivateStatePlugin(),
     react(),
@@ -257,7 +306,7 @@ export default defineConfig({
   },
   server: {
     port: 4177,
-    host: "0.0.0.0",
+    host: "127.0.0.1",
     strictPort: true,
     watch: {
       usePolling: true,
@@ -265,6 +314,7 @@ export default defineConfig({
     },
     fs: {
       allow: ["../..", onchainRuntime, path.dirname(fileURLToPath(import.meta.url))],
+      deny: [".private-state", "**/.private-state/**", ".env", "**/.env"],
     },
     proxy: {
       "/proof-server": {

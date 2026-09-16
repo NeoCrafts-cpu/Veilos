@@ -6,6 +6,7 @@ import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
 import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { useEconomy } from "../../state/economy.js";
 
 export function AuditorPage() {
@@ -21,8 +22,10 @@ export function AuditorPage() {
     ledgerError,
     deployAuditor,
     recordDisclosure,
+    vault,
     refreshLedgers,
   } = useEconomy();
+  useTaskSection("/app/auditor", "grants");
   const [label, setLabel] = useState("scoped-public-anchors");
   const [hours, setHours] = useState("24");
 
@@ -48,8 +51,9 @@ export function AuditorPage() {
         </article>
       </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.auditor}>
+      <Wave2Gate contractAddress={contracts.auditor} ownerSecret={vault.auditorOwnerSecret}>
         <form
+          id="task-grants"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
@@ -76,7 +80,7 @@ export function AuditorPage() {
             Record on Midnight
           </Button>
         </form>
-        <article className="card" style={{ marginTop: 24 }}>
+        <article id="task-anchors" className="card" style={{ marginTop: 24 }}>
           <h2>Grants on indexer</h2>
           {(auditor?.disclosures ?? []).map((row) => (
             <div key={row.disclosureId} className="row">

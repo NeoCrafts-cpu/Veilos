@@ -40,7 +40,7 @@ describe("Wave 2 Preview companions", () => {
     const loaded = await loadCompiledProcurementPreview();
     expect(loaded).not.toBeNull();
     const dummy = Object.fromEntries(
-      ["ownerSecret", "holderSecret", "revocationSecret", "bidSalt", "bidAmount", "awardSalt"].map((name) => [
+      ["ownerSecret", "holderSecret", "revocationSecret", "bidSalt", "bidAmount", "awardSalt", "winnerHolder"].map((name) => [
         name,
         () => undefined,
       ]),

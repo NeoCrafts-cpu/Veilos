@@ -25,6 +25,7 @@ import {
   currentAuthorizationWindow,
   previewAuthorize,
   randomBytes32,
+  spendBucketMayOpen,
   windowIsSafeToSubmit,
   type AuthorizationWindow,
 } from "@velios/policy-engine";
@@ -64,6 +65,11 @@ import {
 } from "../lib/operator-vault.js";
 import { reconcileJournal } from "../lib/reconcile-journal.js";
 import { selectedAgent, selectedMember } from "../lib/session-entities.js";
+import {
+  clearWalletReconnectHint,
+  readWalletReconnectHint,
+  writeWalletReconnectHint,
+} from "../lib/wallet-session.js";
 import { readWorkspaceSelection, writeWorkspaceSelection } from "../lib/workspace.js";
 
 const AUTO_LOCK_MS = 15 * 60 * 1000;
@@ -114,6 +120,7 @@ export type AuthDraft = {
 export type SessionValue = {
   network: NetworkConfig;
   networkLive: boolean | null;
+  provingSource: "wallet" | "local-http" | null;
   wallet: BrowserWalletSnapshot | null;
   publicStore: PublicStore;
   published: PublishedDeployment | null;
@@ -127,6 +134,8 @@ export type SessionValue = {
   lastWindow: AuthorizationWindow | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
+  walletAvailable: boolean;
+  walletReconnectNeeded: boolean;
   walletError: string | null;
   ledgerError: string | null;
   busyAction: "idle" | "createAgent" | "refresh" | "join" | "policy" | "payment" | "deploy" | "connect" | "vault" | "economy" | "governance" | "procurement" | "auditor";
@@ -282,9 +291,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>();
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
   const [wallet, setWallet] = useState<BrowserWalletSnapshot | null>(null);
+  const [walletAvailable, setWalletAvailable] = useState(false);
+  const [walletReconnectNeeded, setWalletReconnectNeeded] = useState(false);
   const [walletApi, setWalletApi] = useState<ConnectedAPI | null>(null);
   const [dustReady, setDustReady] = useState<boolean | null>(null);
   const [providers, setProviders] = useState<unknown>(null);
+  const [provingSource, setProvingSource] = useState<"wallet" | "local-http" | null>(null);
   const [networkLive, setNetworkLive] = useState<boolean | null>(null);
   const [privateState, setPrivateState] = useState<VeliosPrivateState | null>(isVitestRuntime() ? generatePrivateState() : null);
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>(isVitestRuntime() ? "unlocked" : "missing");
@@ -310,6 +322,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const privateStateRef = useRef(privateState);
   const journalRef = useRef(journal);
   const generationRef = useRef(0);
+  const paymentInFlightRef = useRef(false);
   const workspaceHydrated = useRef(isVitestRuntime());
   privateStateRef.current = privateState;
   journalRef.current = journal;
@@ -318,6 +331,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     selectedContract ??
     (workspaceMode === "preview" ? published?.contractAddress : undefined) ??
     publicStore.contractAddress;
+
+  useEffect(() => {
+    if (isVitestRuntime()) return;
+    const check = () => setWalletAvailable(listWallets().length > 0);
+    check();
+    const timer = window.setInterval(check, 1500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isVitestRuntime()) return;
+    const hint = readWalletReconnectHint();
+    setWalletReconnectNeeded(Boolean(hint && hint.networkId === network.networkId && !wallet));
+  }, [network.networkId, wallet]);
 
   useEffect(() => {
     if (isVitestRuntime()) {
@@ -495,15 +522,91 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isVitestRuntime() || !walletApi || !passphraseRef.current) return;
     void (async () => {
-      const { buildBrowserProviders } = await import("@velios/midnight/browser-providers");
-      const built = await buildBrowserProviders(
-        walletApi,
-        network,
-        passphraseRef.current ? { privateStorePassword: passphraseRef.current } : {},
-      );
-      setProviders(built);
+      try {
+        const { buildBrowserProviders } = await import("@velios/midnight/browser-providers");
+        const built = await buildBrowserProviders(
+          walletApi,
+          network,
+          passphraseRef.current ? { privateStorePassword: passphraseRef.current } : {},
+        );
+        setProviders(built.providers);
+        setProvingSource(built.provingSource);
+      } catch {
+        setProviders(null);
+        setProvingSource(null);
+        setNetworkLive(false);
+        setWalletError("The wallet proof provider could not be restored. Reconnect the wallet and retry.");
+      }
     })();
   }, [walletApi, vaultStatus, network]);
+
+  useEffect(() => {
+    if (isVitestRuntime() || !walletApi || !wallet) return;
+    let cancelled = false;
+    let consecutiveErrors = 0;
+    let checking = false;
+
+    const invalidateWalletSession = (message: string) => {
+      generationRef.current += 1;
+      passphraseRef.current = null;
+      setPrivateState(null);
+      setJournal(emptyJournal());
+      setWallet(null);
+      setWalletApi(null);
+      setProviders(null);
+      setDustReady(null);
+      setProvingSource(null);
+      setNetworkLive(null);
+      setWalletReconnectNeeded(true);
+      setWalletError(message);
+      const address = activeContract ?? PENDING_VAULT_ADDRESS;
+      setVaultStatus(readEncryptedVault(network.networkId, address) ? "locked" : "missing");
+    };
+
+    const verifyWalletSession = async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        const [status, configuration, address] = await Promise.all([
+          walletApi.getConnectionStatus(),
+          walletApi.getConfiguration(),
+          walletApi.getUnshieldedAddress().catch(() => undefined),
+        ]);
+        if (cancelled) return;
+        consecutiveErrors = 0;
+        const accountChanged =
+          Boolean(wallet.unshieldedAddress) &&
+          Boolean(address?.unshieldedAddress) &&
+          wallet.unshieldedAddress !== address?.unshieldedAddress;
+        if (
+          status.status !== "connected" ||
+          status.networkId !== network.networkId ||
+          configuration.networkId !== network.networkId ||
+          accountChanged
+        ) {
+          invalidateWalletSession(
+            accountChanged
+              ? "The wallet account changed. Operator access was locked; reconnect to continue."
+              : "The wallet disconnected or changed network. Operator access was locked; reconnect on Preview.",
+          );
+        }
+      } catch {
+        if (cancelled) return;
+        consecutiveErrors += 1;
+        if (consecutiveErrors >= 2) {
+          invalidateWalletSession("The wallet connection became unavailable. Operator access was locked; reconnect to continue.");
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    const timer = window.setInterval(() => void verifyWalletSession(), 10_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [walletApi, wallet, network.networkId, activeContract]);
 
   const value = useMemo<SessionValue>(() => {
     const contractAddress = activeContract;
@@ -568,16 +671,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         detail:
           dustReady === false
             ? "This wallet has no spendable DUST yet."
-            : "Proving spends DUST. tNIGHT alone is not enough.",
+            : dustReady === true
+              ? "This wallet has spendable DUST for proving."
+              : "Connect a Midnight wallet to read spendable DUST. tNIGHT alone is not enough.",
       },
       {
         id: "proof",
-        label: "Proof server",
+        label: "Proving",
         ok: networkLive,
         detail:
-          networkLive === false
-            ? "The local proof server is unavailable."
-            : "Browser proving uses the local proof server, not a hosted prover.",
+          provingSource === "wallet"
+            ? "The connected wallet will prove. Docker is not required on this computer."
+            : networkLive === false
+              ? "This hosted UI does not run a proof server. Use the wallet Proof Station, or start midnightntwrk/proof-server:8.1.0 on this computer."
+              : networkLive === true
+                ? "Local proof-server on loopback. Hosted HTTP provers are rejected."
+                : "Connect a Midnight wallet. Hosted UI does not include a proof server.",
       },
       {
         id: "vault",
@@ -598,6 +707,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return {
       network,
       networkLive,
+      provingSource,
       wallet,
       publicStore,
       published,
@@ -613,6 +723,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       lastIntent,
       lastWindow,
       walletError,
+      walletAvailable,
+      walletReconnectNeeded,
       ledgerError,
       busy,
       busyAction,
@@ -691,23 +803,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           );
           setWallet(snapshot);
           setWalletApi(api as ConnectedAPI);
-          setProviders(built);
+          setProviders(built.providers);
+          setProvingSource(built.provingSource);
           try {
             const dust = await (api as ConnectedAPI).getDustBalance();
             setDustReady(dust.balance > 0n);
           } catch {
             setDustReady(null);
           }
-          const { proofServerReachable } = await import("@velios/midnight/network");
-          const { resolveProofHealthUrl } = await import("@velios/midnight/browser-providers");
+          const { browserProvingReady } = await import("@velios/midnight/browser-providers");
           const walletConfig = await (api as ConnectedAPI).getConfiguration();
-          const healthUrl = resolveProofHealthUrl(walletConfig.proverServerUri, network);
-          setNetworkLive(await proofServerReachable(healthUrl, 2500));
+          setNetworkLive(await browserProvingReady(built.provingSource, walletConfig.proverServerUri, network));
+          writeWalletReconnectHint(network.networkId);
+          setWalletReconnectNeeded(false);
         } catch (error) {
           setWallet(null);
           setWalletApi(null);
           setDustReady(null);
           setProviders(null);
+          setProvingSource(null);
+          setNetworkLive(null);
           setWalletError(publicErrorMessage(error, "wallet connect failed"));
         } finally {
           setBusyAction((current) => (current === "connect" ? "idle" : current));
@@ -719,8 +834,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setWalletApi(null);
         setDustReady(null);
         setProviders(null);
+        setProvingSource(null);
         setWalletError(null);
         setNetworkLive(null);
+        clearWalletReconnectHint();
+        setWalletReconnectNeeded(false);
       },
       createVault: async (passphrase: string) => {
         const state = privateState ?? generatePrivateState();
@@ -873,6 +991,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setWalletError(null);
         setPublicStore((prev) => ({ ...prev, organizationName: name, ledgerSync: "pending" }));
         try {
+          const { browserProvingReady, LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
+          const walletConfig = walletApi ? await walletApi.getConfiguration() : undefined;
+          if (!(await browserProvingReady(provingSource, walletConfig?.proverServerUri, network))) {
+            throw new Error(LOCAL_PROOF_MISSING);
+          }
+          if (walletApi) {
+            const dust = await walletApi.getDustBalance();
+            setDustReady(dust.balance > 0n);
+            if (dust.balance <= 0n) throw new Error("Wallet has no spendable DUST yet.");
+          }
           const { callCircuit, deployOrganization } = await import("@velios/midnight/client");
           const { hex32ToBytes } = await import("@velios/shared-types");
           const deployed = await deployOrganization(providers, name, privateState);
@@ -933,12 +1061,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setBusyAction("createAgent");
         setWalletError(null);
         try {
-          const { proofServerReachable } = await import("@velios/midnight/network");
-          const { resolveProofHealthUrl } = await import("@velios/midnight/browser-providers");
+          const { browserProvingReady, LOCAL_PROOF_MISSING } = await import("@velios/midnight/browser-providers");
           const walletConfig = walletApi ? await walletApi.getConfiguration() : undefined;
-          const healthUrl = resolveProofHealthUrl(walletConfig?.proverServerUri, network);
-          if (!(await proofServerReachable(healthUrl, 2500))) {
-            throw new Error("Proof server is unavailable. Keep midnightntwrk/proof-server on port 6300.");
+          if (!(await browserProvingReady(provingSource, walletConfig?.proverServerUri, network))) {
+            throw new Error(LOCAL_PROOF_MISSING);
           }
           if (walletApi) {
             const dust = await walletApi.getDustBalance();
@@ -1050,6 +1176,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           );
           return intent.actionId;
         }
+        if (paymentInFlightRef.current) {
+          setOperations((prev) =>
+            upsertOperation(prev, {
+              ...operation,
+              status: "failed",
+              outcome: { kind: "failed", code: "environment_missing" },
+            }),
+          );
+          return intent.actionId;
+        }
+        paymentInFlightRef.current = true;
         setBusy(true);
         setBusyAction("payment");
         void (async () => {
@@ -1070,6 +1207,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             if (stillOpen()) setLastWindow(window);
             if (!windowIsSafeToSubmit(window, now)) {
               update({ status: "timeout", outcome: { kind: "timeout" } });
+              return;
+            }
+            if (!spendBucketMayOpen(privateState.spendPeriodStart, window, now)) {
+              update({
+                status: "rejected",
+                previewCode: "daily_limit",
+                circuitSubmitted: false,
+                outcome: { kind: "rejected", code: "policy_violation" },
+              });
               return;
             }
             const vendorId = vendorIdFromRecipient(input.recipient);
@@ -1188,6 +1334,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               circuitSubmitted: true,
             });
           } finally {
+            paymentInFlightRef.current = false;
             if (stillOpen()) {
               setBusy(false);
               setBusyAction("idle");
@@ -1200,6 +1347,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [
     network,
     networkLive,
+    provingSource,
     wallet,
     providers,
     publicStore,
@@ -1212,6 +1360,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     lastIntent,
     lastWindow,
     walletError,
+    walletAvailable,
+    walletReconnectNeeded,
     ledgerError,
     privateState,
     recipientLabel,

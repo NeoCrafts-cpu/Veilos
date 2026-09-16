@@ -4,6 +4,7 @@ import { Logo } from "../../components/Logo.js";
 import { SkipLink } from "../../components/SkipLink.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import { PREVIEW_DEPLOYMENT, PREVIEW_ECONOMY_DEPLOYMENT } from "@velios/midnight/published";
+import { veliosBuildId } from "../../lib/build-info.js";
 import "../../docs.css";
 
 const SECTIONS = [
@@ -206,7 +207,9 @@ export function DocsPage() {
               <li>Private state encrypted at rest: PBKDF2 210000 + AES-GCM, scoped to network + contract.</li>
               <li>Witnesses rebound to public commitments inside Compact. Untrusted witness integers are not authorization.</li>
               <li>Nullifiers prevent replay (action ids, settlement, votes, bids, credential revocation).</li>
-              <li>Proofs use the local proof-server. Hosted 1AM provers are rejected.</li>
+              <li>
+                Proofs use the wallet Proof Station or a local proof-server. Hosted 1AM HTTP provers are rejected.
+              </li>
               <li>No secrets in logs. No plaintext policy in URLs.</li>
             </ul>
           </section>
@@ -218,7 +221,7 @@ export function DocsPage() {
               <li>Unlock the operator vault that opens the on-chain commitments.</li>
               <li>Issue a treasury credential if using Wave 2 payments.</li>
               <li>Submit <code>authorizePayment</code> / <code>authorizeAction</code>.</li>
-              <li>Wallet proves via proof-server 8.1.0.</li>
+              <li>Wallet proves via Proof Station or local proof-server 8.1.0.</li>
               <li>Status must be SucceedEntirely.</li>
               <li>Indexer must contain the exact action id.</li>
             </ol>
@@ -317,10 +320,13 @@ pnpm --filter @velios/web dev
 pnpm test`}</pre>
             <ul>
               <li>Node &gt;= 22 (<code>.nvmrc</code>).</li>
-              <li>Proof server: Docker image <code>midnightntwrk/proof-server:8.1.0</code> on port 6300.</li>
+              <li>
+                Proving: wallet Proof Station, or Docker image <code>midnightntwrk/proof-server:8.1.0</code> on port
+                6300. Vercel does not host a proof server.
+              </li>
               <li>Wallet: Midnight DApp Connector v4. Connect from Get Started. Never paste a seed into the UI.</li>
               <li>Preview deploy: <code>pnpm deploy:preview</code> and <code>pnpm deploy:preview:economy</code> (seed from local <code>.env</code>, never committed).</li>
-              <li>Vercel hosts static UI only. Proofs stay local.</li>
+              <li>Vercel hosts static UI only. Proofs stay in the wallet or on this computer.</li>
               <li>
                 Env for the static UI: <code>VITE_VELIOS_NETWORK=preview</code> (already in <code>.env.production</code>).
               </li>
@@ -392,7 +398,16 @@ pnpm test`}</pre>
               <dt>What is public?</dt>
               <dd>Ids, commitments, counters, SucceedEntirely transactions, unshielded amount/recipient, finalized tallies.</dd>
               <dt>How do proofs work?</dt>
-              <dd>MidnightJS submitCallTx + local proof-server. ZK artifacts are fetched from this origin, not a hosted prover.</dd>
+              <dd>
+                MidnightJS submitCallTx plus the wallet Proof Station or a local proof-server. ZK artifacts are fetched
+                from this origin. Hosted HTTP provers are rejected.
+              </dd>
+              <dt>Why does the hosted app say proving is unavailable when Docker is closed?</dt>
+              <dd>
+                Vercel only serves this static UI. It cannot see Docker on your PC. Connect a Midnight wallet so proofs
+                run in the wallet Proof Station, or start <code>midnightntwrk/proof-server:8.1.0</code> on the same
+                computer as the browser.
+              </dd>
               <dt>How is Midnight used?</dt>
               <dd>Compact contracts, MidnightJS 4.1.1, DApp Connector v4, official Preview indexer. No Solidity stand-in.</dd>
               <dt>What happens when a proof fails?</dt>
@@ -403,7 +418,9 @@ pnpm test`}</pre>
               <dd>The ledger stores ballot commitments and nullifiers. Yes/no is disclosed only at finalize.</dd>
             </dl>
           </section>
-          <footer className="docs-footer">Veilos · {year} · Apache-2.0</footer>
+          <footer className="docs-footer">
+            Veilos · {year} · Apache-2.0 · Build {veliosBuildId()}
+          </footer>
         </main>
       </div>
     </div>

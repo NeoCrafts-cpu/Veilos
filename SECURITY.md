@@ -38,5 +38,9 @@ The UI must never display a successful result from optimistic state alone.
 - Failed `assert` in Compact is a dynamic error: the proof / transaction does not succeed. Do not record a public "rejected" ledger row unless that is an intentional, separately specified successful circuit.
 - Never persist seed phrases, mnemonics, or `deployment.json` contents in git.
 - Indexer data is eventually consistent. Treat it as observed public state, not as proof of local private-state correctness.
+- A successful submission followed by stale indexer read-back must retain any encrypted private opening needed to use or reconcile that transaction. It must still be labeled stale, never confirmed.
+- Revalidate connector status, network, and account immediately before wallet balancing/submission. A detected account/network change locks operator state and invalidates providers.
+- Hosted UI proving uses the wallet `getProvingProvider` capability. Arbitrary hosted HTTP provers are rejected because they would receive private witnesses; loopback proving remains an explicit local fallback.
+- Static hosts must ship the CSP and related security headers in `vercel.json` / `render.yaml`.
 - Unshielded NIGHT settlement publishes amount, recipient, tx id, and timing. Authorization, credentials, ballots, and losing bids stay private. Official Midnight DID/VC adapters are experimental until MidnightJS 4.1.1 compatibility is proven.
 - See `docs/threat-model.md` for the Wave 1 threat catalog.

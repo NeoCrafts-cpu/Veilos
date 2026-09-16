@@ -4,7 +4,19 @@
 
 import type { VeliosEconomyPrivateState } from "./economy-witnesses.js";
 
-export type EconomyPreviewPrivateState = Omit<VeliosEconomyPrivateState, "credentialPath" | "ballotChoice" | "ballotSalt" | "tallyYes" | "tallyNo" | "bidSalt" | "bidAmount" | "awardSalt">;
+export type EconomyPreviewPrivateState = Omit<
+  VeliosEconomyPrivateState,
+  | "credentialPath"
+  | "policySalt"
+  | "ballotChoice"
+  | "ballotSalt"
+  | "tallyYes"
+  | "tallyNo"
+  | "bidSalt"
+  | "bidAmount"
+  | "awardSalt"
+  | "winnerHolder"
+>;
 
 export function createEconomyPreviewPrivateState(
   seed: Pick<EconomyPreviewPrivateState, "ownerSecret"> & Partial<EconomyPreviewPrivateState>,
@@ -23,6 +35,8 @@ export function createEconomyPreviewPrivateState(
     dailyLimit: 0n,
     spendPeriodStart: 0n,
     spendDaily: 0n,
+    spendSalt: zeros,
+    nextSpendSalt: zeros,
     ...seed,
   };
 }
@@ -54,4 +68,8 @@ export const economyPreviewWitnesses = {
     [privateState, privateState.spendPeriodStart] as const,
   spendDaily: ({ privateState }: { privateState: EconomyPreviewPrivateState }) =>
     [privateState, privateState.spendDaily] as const,
+  spendSalt: ({ privateState }: { privateState: EconomyPreviewPrivateState }) =>
+    [privateState, privateState.spendSalt] as const,
+  nextSpendSalt: ({ privateState }: { privateState: EconomyPreviewPrivateState }) =>
+    [privateState, privateState.nextSpendSalt] as const,
 };

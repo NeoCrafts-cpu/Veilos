@@ -24,6 +24,9 @@ export type VeliosEconomyPrivateState = {
   dailyLimit: bigint;
   spendPeriodStart: bigint;
   spendDaily: bigint;
+  spendSalt: Uint8Array;
+  nextSpendSalt: Uint8Array;
+  policySalt: Uint8Array;
   ballotChoice: bigint;
   ballotSalt: Uint8Array;
   tallyYes: bigint;
@@ -31,6 +34,7 @@ export type VeliosEconomyPrivateState = {
   bidSalt: Uint8Array;
   bidAmount: bigint;
   awardSalt: Uint8Array;
+  winnerHolder: Uint8Array;
 };
 
 export type EconomyWitnessContext = {
@@ -62,6 +66,9 @@ export function createEconomyPrivateState(
     dailyLimit: seed.dailyLimit ?? 0n,
     spendPeriodStart: seed.spendPeriodStart ?? 0n,
     spendDaily: seed.spendDaily ?? 0n,
+    spendSalt: seed.spendSalt ?? zeros,
+    nextSpendSalt: seed.nextSpendSalt ?? zeros,
+    policySalt: seed.policySalt ?? zeros,
     ballotChoice: seed.ballotChoice ?? 0n,
     ballotSalt: seed.ballotSalt ?? zeros,
     tallyYes: seed.tallyYes ?? 0n,
@@ -69,6 +76,7 @@ export function createEconomyPrivateState(
     bidSalt: seed.bidSalt ?? zeros,
     bidAmount: seed.bidAmount ?? 0n,
     awardSalt: seed.awardSalt ?? zeros,
+    winnerHolder: seed.winnerHolder ?? zeros,
     ...seed,
   };
 }
@@ -88,6 +96,9 @@ export const economyWitnesses = {
   dailyLimit: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.dailyLimit] as const,
   spendPeriodStart: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.spendPeriodStart] as const,
   spendDaily: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.spendDaily] as const,
+  spendSalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.spendSalt] as const,
+  nextSpendSalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.nextSpendSalt] as const,
+  policySalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.policySalt] as const,
   ballotChoice: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.ballotChoice] as const,
   ballotSalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.ballotSalt] as const,
   tallyYes: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.tallyYes] as const,
@@ -95,4 +106,5 @@ export const economyWitnesses = {
   bidSalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.bidSalt] as const,
   bidAmount: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.bidAmount] as const,
   awardSalt: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.awardSalt] as const,
+  winnerHolder: ({ privateState }: EconomyWitnessContext) => [privateState, privateState.winnerHolder] as const,
 };

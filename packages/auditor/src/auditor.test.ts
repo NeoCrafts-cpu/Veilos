@@ -33,6 +33,12 @@ describe("scoped auditor disclosure", () => {
       verifyDisclosure(bundle, { auditorId: randomBytes32(), now: 10n, expectedAnchors: bundle.anchors }),
     ).toThrow(/wrong auditor/);
     verifyDisclosure(bundle, { auditorId, now: 10n, expectedAnchors: bundle.anchors });
+    expect(() =>
+      verifyDisclosure(
+        { ...bundle, claims: { "action.result": "authorized", extra: "1" } },
+        { auditorId, now: 10n, expectedAnchors: bundle.anchors },
+      ),
+    ).toThrow(/modified claims/);
     const encrypted = await encryptDisclosureBundle(bundle, "AuditorPassphrase12");
     expect(JSON.stringify(encrypted)).not.toMatch(/authorized|policy.limit|25000/);
   });

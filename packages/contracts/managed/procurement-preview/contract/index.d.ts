@@ -3,10 +3,10 @@ import type * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
 export type Witnesses<PS> = {
   ownerSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   holderSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  revocationSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   bidSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   bidAmount(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   awardSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  winnerHolder(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
 }
 
 export type ImpureCircuits<PS> = {
@@ -48,7 +48,7 @@ export type ProvableCircuits<PS> = {
 export type PureCircuits = {
   ownerCommitmentOf(sk_0: Uint8Array): Uint8Array;
   holderCommitmentOf(sk_0: Uint8Array): Uint8Array;
-  bidderRevocationOf(holder_0: Uint8Array, secret_0: Uint8Array): Uint8Array;
+  bidderRevocationOf(holder_0: Uint8Array): Uint8Array;
   bidCommitmentOf(procurementId_0: Uint8Array,
                   holder_0: Uint8Array,
                   amount_0: bigint,
@@ -65,8 +65,7 @@ export type Circuits<PS> = {
   holderCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                      sk_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   bidderRevocationOf(context: __compactRuntime.CircuitContext<PS>,
-                     holder_0: Uint8Array,
-                     secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                     holder_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   bidCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                   procurementId_0: Uint8Array,
                   holder_0: Uint8Array,

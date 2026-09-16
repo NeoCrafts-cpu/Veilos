@@ -6,7 +6,10 @@ export type CredentialIssueInput = {
   className: CredentialClass;
   expiry: bigint;
   salt: Uint8Array;
-  revocationSecret: Uint8Array;
+  revocationSecret?: Uint8Array;
+  vendorId?: Uint8Array;
+  perActionLimit?: bigint;
+  dailyLimit?: bigint;
 };
 
 export type IssuedCredentialPublic = {

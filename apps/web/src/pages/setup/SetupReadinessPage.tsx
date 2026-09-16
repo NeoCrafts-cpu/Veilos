@@ -11,7 +11,7 @@ export function SetupReadinessPage() {
   const navigate = useNavigate();
   const { readiness, connectWallet, refreshLedger, startOwnerSetup, wallet, dustReady, networkLive, vaultStatus } =
     useSession();
-  const ready = Boolean(wallet) && dustReady !== false && networkLive !== false;
+  const ready = Boolean(wallet) && dustReady === true && networkLive === true;
 
   return (
     <JourneyLayout
@@ -28,7 +28,7 @@ export function SetupReadinessPage() {
               navigate("/app/setup/org");
             }}
           >
-            Continue to organization
+            {ready ? "Continue to organization" : wallet ? "Complete readiness checks" : "Connect wallet to continue"}
           </Button>
           <Button to="/app/preview" variant="secondary">
             Explore public Preview
@@ -41,6 +41,12 @@ export function SetupReadinessPage() {
         <p className="footer-note">
           Spendable DUST is required for proving. tNIGHT alone is not enough. Generate DUST from the official Midnight
           wallet path, then retry.
+        </p>
+      ) : null}
+      {networkLive === false ? (
+        <p className="footer-note">
+          Vercel only hosts this UI. Circuit proofs need the wallet Proof Station or a local proof-server on this
+          computer. Docker on another machine is not used.
         </p>
       ) : null}
       {vaultStatus === "missing" ? (

@@ -34,7 +34,7 @@ export function SetupOrgPage() {
             navigate("/app/setup/vault");
           }}
         >
-          Review organization
+          Continue to operator vault
         </Button>
       }
     >

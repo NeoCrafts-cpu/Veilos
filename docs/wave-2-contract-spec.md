@@ -21,4 +21,6 @@ Holder secret, credential class/expiry/salt/path, policy and spend openings, int
 
 `issueCredential`, `revokeCredential`, `authorizePayment`, `depositNight`, `settleAuthorizedPayment`, `createProposal`, `castBallot`, `finalizeProposal`, `createProcurement`, `submitBid`, `awardProcurement(actionId)` (requires an unused authorized intent), `recordDisclosure`.
 
-`finalizeProposal` writes only the final yes/no counts. Completeness of those counts versus every accepted opening is the experimental tally adapter, not a Compact membership proof.
+`finalizeProposal` only marks the proposal finalized. Compact does not write a proven tally. Local openings remain an experimental operator adapter.
+
+Preview `authorizePayment` binds vendor and limits into the issued credential commitment and rotates a public `spendCommitment`. Revocation nullifiers are deterministic from the public commitment. `awardProcurement` must name a bid already present for that lot.

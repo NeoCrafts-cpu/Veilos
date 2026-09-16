@@ -5,6 +5,8 @@ import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
 import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../../hooks/useTaskSection.js";
+import { validatePolicyAmount } from "../../lib/validation.js";
 import { useEconomy } from "../../state/economy.js";
 import type { CredentialClass } from "@velios/shared-types";
 
@@ -19,6 +21,7 @@ export function CredentialsPage() {
     busy,
     lastResult,
     ledgerError,
+    publishedEconomy,
     deployEconomy,
     issueCredential,
     revokeCredential,
@@ -26,6 +29,11 @@ export function CredentialsPage() {
   } = useEconomy();
   const [className, setClassName] = useState<CredentialClass>("treasury");
   const [days, setDays] = useState("30");
+  const [recipient, setRecipient] = useState("");
+  const [perAction, setPerAction] = useState("100");
+  const [daily, setDaily] = useState("100");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  useTaskSection("/app/credentials", "issue");
 
   return (
     <div className="page">
@@ -35,7 +43,13 @@ export function CredentialsPage() {
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
       <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta label="economy-preview" address={contracts.economy} onDeploy={() => void deployEconomy()} busy={busy} />
+        <ContractMeta
+          label="economy-preview"
+          address={contracts.economy}
+          publishedAddress={publishedEconomy?.contractAddress}
+          onDeploy={() => void deployEconomy()}
+          busy={busy}
+        />
         <article className="card blue">
           <h2>Public ledger</h2>
           <p>Credentials {economy?.credentialCount?.toString() ?? "0"}</p>
@@ -55,13 +69,32 @@ export function CredentialsPage() {
         </p>
       </article>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.economy}>
+      <Wave2Gate
+        contractAddress={contracts.economy}
+        ownerSecret={vault.economyOwnerSecret}
+        publishedAddress={publishedEconomy?.contractAddress}
+      >
         <form
+          id="task-issue"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
             event.preventDefault();
-            void issueCredential({ className, expiryDays: Number(days) || 30 });
+            const next: Record<string, string> = {};
+            const parsedLimit = className === "treasury" ? validatePolicyAmount(perAction, "Per-action limit") : undefined;
+            const parsedDaily = className === "treasury" ? validatePolicyAmount(daily, "Daily cap") : undefined;
+            if (className === "treasury" && !recipient.trim()) next.recipient = "Treasury credentials bind one unshielded recipient.";
+            if (parsedLimit?.error) next.perAction = parsedLimit.error;
+            if (parsedDaily?.error) next.daily = parsedDaily.error;
+            setErrors(next);
+            if (Object.keys(next).length) return;
+            void issueCredential({
+              className,
+              expiryDays: Number(days) || 30,
+              ...(recipient.trim() ? { recipient: recipient.trim() } : {}),
+              ...(parsedLimit?.amount !== undefined ? { perActionLimit: parsedLimit.amount } : {}),
+              ...(parsedDaily?.amount !== undefined ? { dailyLimit: parsedDaily.amount } : {}),
+            });
           }}
         >
           <h2>Issue credential</h2>
@@ -82,11 +115,42 @@ export function CredentialsPage() {
             onChange={(event) => setDays(event.target.value)}
             hint="Expiry stays private. Compact proves it covers the authorization window."
           />
+          {className === "treasury" ? (
+            <>
+              <FormField
+                id="cred-vendor"
+                label="Bound unshielded recipient"
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
+                hint="Hashed into the credential. authorizePayment can only pay this vendor."
+                error={errors.recipient}
+                required
+              />
+              <FormField
+                id="cred-per-action"
+                label="Private per-action limit"
+                inputMode="numeric"
+                value={perAction}
+                onChange={(event) => setPerAction(event.target.value)}
+                error={errors.perAction}
+                required
+              />
+              <FormField
+                id="cred-daily"
+                label="Private daily cap"
+                inputMode="numeric"
+                value={daily}
+                onChange={(event) => setDaily(event.target.value)}
+                error={errors.daily}
+                required
+              />
+            </>
+          ) : null}
           <Button loading={busy} loadingLabel="Proving issueCredential">
             Issue on Midnight
           </Button>
         </form>
-        <article className="card" style={{ marginTop: 24 }}>
+        <article id="task-registry" className="card" style={{ marginTop: 24 }}>
           <h2>Commitments on indexer</h2>
           {(economy?.credentialCommitments ?? []).map((commitment) => (
             <div className="row" key={commitment}>

@@ -38,6 +38,7 @@ export {
   carriedSpend,
   currentAuthorizationWindow,
   nowSeconds,
+  spendBucketMayOpen,
   windowIsSafeToSubmit,
   PERIOD_SECONDS,
   type AuthorizationWindow,

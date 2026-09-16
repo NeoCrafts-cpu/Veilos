@@ -6,7 +6,6 @@ export type Witnesses<PS> = {
   credentialClass(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   credentialExpiry(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   credentialSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  revocationSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   intentSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   reasonDigestW(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   vendorId(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
@@ -14,6 +13,8 @@ export type Witnesses<PS> = {
   dailyLimit(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   spendPeriodStart(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   spendDaily(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
+  spendSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  nextSpendSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
 }
 
 export type ImpureCircuits<PS> = {
@@ -61,8 +62,14 @@ export type PureCircuits = {
                          org_0: Uint8Array,
                          classId_0: bigint,
                          expiry_0: bigint,
-                         salt_0: Uint8Array): Uint8Array;
-  revocationNullifierOf(commitment_0: Uint8Array, secret_0: Uint8Array): Uint8Array;
+                         salt_0: Uint8Array,
+                         vendor_0: Uint8Array,
+                         perAction_0: bigint,
+                         daily_0: bigint): Uint8Array;
+  revocationNullifierOf(commitment_0: Uint8Array): Uint8Array;
+  spendCommitmentOf(periodStart_0: bigint,
+                    dailySpend_0: bigint,
+                    salt_0: Uint8Array): Uint8Array;
   intentCommitmentOf(actionId_0: Uint8Array,
                      agentId_0: Uint8Array,
                      org_0: Uint8Array,
@@ -87,10 +94,16 @@ export type Circuits<PS> = {
                          org_0: Uint8Array,
                          classId_0: bigint,
                          expiry_0: bigint,
-                         salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                         salt_0: Uint8Array,
+                         vendor_0: Uint8Array,
+                         perAction_0: bigint,
+                         daily_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   revocationNullifierOf(context: __compactRuntime.CircuitContext<PS>,
-                        commitment_0: Uint8Array,
-                        secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                        commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  spendCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
+                    periodStart_0: bigint,
+                    dailySpend_0: bigint,
+                    salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   intentCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                      actionId_0: Uint8Array,
                      agentId_0: Uint8Array,
@@ -188,6 +201,7 @@ export type Ledger = {
 }]>
   };
   readonly settlementCount: bigint;
+  readonly spendCommitment: Uint8Array;
 }
 
 export type ContractReferenceLocations = any;

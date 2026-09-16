@@ -2,6 +2,8 @@ export {
   credentialCommitment,
   holderCommitment,
   revocationNullifier,
+  voterRevocationNullifier,
+  bidderRevocationNullifier,
   DOMAIN_CRED,
   DOMAIN_CRED_REV,
   DOMAIN_HOLDER,

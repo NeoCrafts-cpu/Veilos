@@ -8,12 +8,15 @@ import { PublicId } from "../components/PublicId.js";
 import { RecoveryPanel } from "../components/RecoveryPanel.js";
 import { StatusChip } from "../components/StatusChip.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../hooks/useTaskSection.js";
+import { veliosBuildId, veliosBuiltAt } from "../lib/build-info.js";
 import { validateOperatorPassphrase } from "../lib/passphrase.js";
 import { selectedAgent, selectedMember } from "../lib/session-entities.js";
 import { useSession } from "../state/session.js";
 
 export function OrganizationPage() {
   useDocumentTitle("Organization");
+  useTaskSection("/app/org", "overview");
   const { contractAddress: routeContract } = useParams();
   const {
     publicStore,
@@ -40,6 +43,7 @@ export function OrganizationPage() {
   const [passphrase, setPassphrase] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [vaultError, setVaultError] = useState<string>();
+  const [importError, setImportError] = useState<string>();
   const org = publicStore.organization;
   const agent = selectedAgent(publicStore.agents, selectedAgentId);
   const member = selectedMember(publicStore.members, selectedMemberId);
@@ -68,7 +72,7 @@ export function OrganizationPage() {
         </EmptyState>
       ) : null}
 
-      <section className="card" style={{ marginTop: 24 }}>
+      <section id="task-overview" className="card" style={{ marginTop: 24 }}>
         <h2>Overview</h2>
         <div className="grid">
           <article>
@@ -120,7 +124,7 @@ export function OrganizationPage() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}>
+      <section id="task-agents" className="card" style={{ marginTop: 24 }}>
         <h2>Agent and policy</h2>
         {publicStore.agents.length > 1 ? (
           <ul>
@@ -183,7 +187,10 @@ export function OrganizationPage() {
             className="form"
             onSubmit={(event) => {
               event.preventDefault();
-              void unlockVault(passphrase);
+              setVaultError(undefined);
+              void unlockVault(passphrase).catch(() => {
+                setVaultError("That passphrase did not open this operator vault. Retry or import the matching backup.");
+              });
             }}
           >
             <FormField
@@ -192,12 +199,16 @@ export function OrganizationPage() {
               type="password"
               autoComplete="current-password"
               value={passphrase}
-              onChange={(event) => setPassphrase(event.target.value)}
+              onChange={(event) => {
+                setPassphrase(event.target.value);
+                setVaultError(undefined);
+              }}
               hint={
                 vaultStatus === "dev_available"
                   ? "A local development export exists. Protect it with a passphrase. This is not a wallet recovery phrase."
                   : "The wallet pays transactions. This passphrase opens the operator vault."
               }
+              error={vaultError}
             />
             <button type="submit" className="btn">
               Unlock operator access
@@ -214,7 +225,10 @@ export function OrganizationPage() {
                 setVaultError(strength);
                 return;
               }
-              void createVault(passphrase);
+              setVaultError(undefined);
+              void createVault(passphrase).catch(() => {
+                setVaultError("The encrypted operator vault could not be created. Retry without leaving this page.");
+              });
             }}
           >
             <FormField
@@ -223,7 +237,10 @@ export function OrganizationPage() {
               type="password"
               autoComplete="new-password"
               value={passphrase}
-              onChange={(event) => setPassphrase(event.target.value)}
+              onChange={(event) => {
+                setPassphrase(event.target.value);
+                setVaultError(undefined);
+              }}
               hint="Use at least 16 characters with three of: uppercase, lowercase, digits, and symbols. Never enter a wallet recovery phrase."
               error={vaultError}
             />
@@ -246,7 +263,14 @@ export function OrganizationPage() {
           className="form"
           onSubmit={(event) => {
             event.preventDefault();
-            if (importFile) void importOperatorState(importFile, passphrase);
+            if (!importFile) {
+              setImportError("Choose an encrypted operator backup first.");
+              return;
+            }
+            setImportError(undefined);
+            void importOperatorState(importFile, passphrase).catch(() => {
+              setImportError("The backup could not be opened. Check the file, passphrase, network, and organization.");
+            });
           }}
         >
           <FormField
@@ -254,7 +278,11 @@ export function OrganizationPage() {
             label="Import backup passphrase"
             type="password"
             value={passphrase}
-            onChange={(event) => setPassphrase(event.target.value)}
+            onChange={(event) => {
+              setPassphrase(event.target.value);
+              setImportError(undefined);
+            }}
+            error={importError}
           />
           <label htmlFor="import-file">
             Encrypted operator backup
@@ -262,7 +290,10 @@ export function OrganizationPage() {
               id="import-file"
               type="file"
               accept="application/json"
-              onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                setImportFile(event.target.files?.[0] ?? null);
+                setImportError(undefined);
+              }}
             />
           </label>
           <button type="submit" className="btn ghost">
@@ -276,6 +307,10 @@ export function OrganizationPage() {
         <p className="mono">{org?.organizationId ?? "not on indexer"}</p>
         <p className="label">Contract</p>
         <p className="mono">{contractAddress ?? published?.contractAddress ?? "not selected"}</p>
+        <p className="label">Build</p>
+        <p className="mono">
+          {veliosBuildId()} · {veliosBuiltAt()}
+        </p>
         <p className="label">Admin commitment</p>
         <p className="mono">{org?.adminCommitment ?? "awaiting indexer"}</p>
         {publicStore.members.map((member) => (

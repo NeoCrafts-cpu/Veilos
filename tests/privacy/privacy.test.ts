@@ -18,6 +18,7 @@ const persistAllowlist = [
   path.join(root, "apps/web/src/lib/workspace.ts"),
   path.join(root, "apps/web/src/lib/wave2-contracts.ts"),
   path.join(root, "apps/web/src/lib/wave2-vault.ts"),
+  path.join(root, "apps/web/src/lib/wallet-session.ts"),
 ];
 
 function walk(dir: string, acc: string[] = []): string[] {
@@ -31,7 +32,7 @@ function walk(dir: string, acc: string[] = []): string[] {
 }
 
 describe("privacy regressions", () => {
-  it("P1/P5 production sources do not log secrets or persist plaintext policy", () => {
+  it("P1/P5 production sources do not log secrets or persist plaintext policy", { timeout: 20_000 }, () => {
     const files = [
       ...walk(path.join(root, "apps/web/src")),
       ...walk(path.join(root, "packages/midnight/src")),

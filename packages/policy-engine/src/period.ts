@@ -67,3 +67,22 @@ export function carriedSpend(
   }
   return committedPeriodStart === window.periodStart ? committedSpend : 0n;
 }
+
+/**
+ * A new UTC-day bucket is allowed only after the committed start plus 86400s.
+ * Wave 1 Compact still resets on any later `periodStart`; official clients
+ * refuse that opening so the daily cap cannot be skipped from this UI.
+ */
+export function spendBucketMayOpen(
+  committedPeriodStart: bigint,
+  window: AuthorizationWindow,
+  nowSecondsValue: bigint,
+): boolean {
+  if (committedPeriodStart === 0n || committedPeriodStart === window.periodStart) {
+    return true;
+  }
+  if (committedPeriodStart > window.periodStart) {
+    return false;
+  }
+  return nowSecondsValue > committedPeriodStart + PERIOD_SECONDS;
+}

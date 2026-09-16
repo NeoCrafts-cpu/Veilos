@@ -9,6 +9,7 @@ export type ProcurementPreviewPrivateState = {
   bidSalt: Uint8Array;
   bidAmount: bigint;
   awardSalt: Uint8Array;
+  winnerHolder: Uint8Array;
 };
 
 export function createProcurementPreviewPrivateState(
@@ -21,6 +22,7 @@ export function createProcurementPreviewPrivateState(
     bidSalt: zeros,
     bidAmount: 0n,
     awardSalt: zeros,
+    winnerHolder: zeros,
     ...seed,
   };
 }
@@ -38,4 +40,6 @@ export const procurementPreviewWitnesses = {
     [privateState, privateState.bidAmount] as const,
   awardSalt: ({ privateState }: { privateState: ProcurementPreviewPrivateState }) =>
     [privateState, privateState.awardSalt] as const,
+  winnerHolder: ({ privateState }: { privateState: ProcurementPreviewPrivateState }) =>
+    [privateState, privateState.winnerHolder] as const,
 };

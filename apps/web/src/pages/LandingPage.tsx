@@ -84,7 +84,7 @@ const NEXT_MODULES = [
 const ARCH = [
   { title: "Compact", detail: "authorization.compact · language 0.23" },
   { title: "Private state", detail: "Witnesses rebound to public commitments" },
-  { title: "ZK proof", detail: "Proof server · never mocked on production paths" },
+  { title: "ZK proof", detail: "Wallet Proof Station or local proof-server · never mocked" },
   { title: "Wallet", detail: "DApp Connector v4 · Lace / window.midnight" },
   { title: "Indexer", detail: "GraphQL v4 · public result only" },
   { title: "MidnightJS", detail: "4.1.1 deployContract / submitCallTx" },

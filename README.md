@@ -23,7 +23,7 @@ This is the **first** AKINDO submission (not a resubmit). Topic on GitHub: **`mi
 | Judging rubric map | [docs/RUBRIC.md](docs/RUBRIC.md) |
 | Market / GTM | [docs/BUSINESS.md](docs/BUSINESS.md) |
 | Community posts to publish | [docs/COMMUNITY.md](docs/COMMUNITY.md) |
-| Live UI | https://veilos-web.vercel.app |
+| Live UI | https://veilos-web-ten.vercel.app |
 | Preview contracts | authorization `0787a1918a339a98a4442e5f1fe370506e1bb838d5819205afa79e53ab2d8e02` · economy-preview `0b4a8d7e906a1c05d2c3c788ecf46682387e2239a4df96b201f34ff489547c8f` |
 
 Ecosystem attribution: MidnightJS 4.1.1 and Docker pins follow [`midnightntwrk/example-hello-world`](https://github.com/midnightntwrk/example-hello-world) (Apache 2.0). See `NOTICE`.
@@ -32,7 +32,7 @@ Ecosystem attribution: MidnightJS 4.1.1 and Docker pins follow [`midnightntwrk/e
 
 **No wallet (5–10 min)**
 
-1. Open https://veilos-web.vercel.app — landing, Get Started, Preview organization, Privacy Inspector.
+1. Open https://veilos-web-ten.vercel.app — landing, Get Started, Preview organization, Privacy Inspector.
 2. Skim `packages/contracts/compact/authorization.compact` and `economy-preview.compact`.
 3. `pnpm install && pnpm --filter @velios/contracts test && pnpm --filter @velios/web test` (Node 22).
 
@@ -171,7 +171,7 @@ The operator UI is a static Vite SPA (`pnpm build` → `apps/web/dist`). **Verce
 
 Import the GitHub repo with root directory `/`. Node 22 comes from `.nvmrc`. Do not set wallet seeds, mnemonics, or private-state passwords on the host. `VITE_VELIOS_NETWORK` defaults to `preview`.
 
-Submitting a circuit still needs a local `midnightntwrk/proof-server:8.1.0` on loopback, or the wallet Proof Station. Do not point the UI at a hosted prover — witnesses would leave the operator machine.
+Submitting a circuit uses the wallet Proof Station (`getProvingProvider`) when the connector exposes it. Otherwise it needs a local `midnightntwrk/proof-server:8.1.0` on loopback. Vercel does not run a proof server. Do not point the UI at a hosted HTTP prover — witnesses would leave the operator machine.
 
 Preview contract addresses are public and baked into `@velios/midnight`. Creating an organization from the hosted UI is a real Midnight transaction signed by the connected wallet.
 

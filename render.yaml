@@ -11,6 +11,18 @@ services:
         source: /*
         destination: /index.html
     headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://indexer.preview.midnight.network wss://indexer.preview.midnight.network https://rpc.preview.midnight.network wss://rpc.preview.midnight.network http://127.0.0.1:6300 http://localhost:6300; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=(), payment=()"
       - path: /keys/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

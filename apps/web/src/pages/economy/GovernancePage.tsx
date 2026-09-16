@@ -6,6 +6,7 @@ import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
 import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { useEconomy } from "../../state/economy.js";
 
 export function GovernancePage() {
@@ -24,8 +25,11 @@ export function GovernancePage() {
     finalizeProposal,
     refreshLedgers,
   } = useEconomy();
+  useTaskSection("/app/governance", "voters");
   const [duration, setDuration] = useState("300");
   const [proposalId, setProposalId] = useState("");
+  const [selectedVoter, setSelectedVoter] = useState("");
+  const voterCommitment = selectedVoter || vault.voters.at(-1)?.holderCommitment || "";
 
   return (
     <div className="page">
@@ -46,20 +50,21 @@ export function GovernancePage() {
           <p>Voters {governance?.voterCount.toString() ?? "0"}</p>
           <p>Proposals {governance?.proposalCount.toString() ?? "0"}</p>
           <p>Ballot commitments {governance?.ballotCommitments.length ?? 0}</p>
-          <p className="muted">Tally completeness remains an experimental adapter. Finalize discloses yes/no from operator openings held in this vault.</p>
+          <p className="muted">Finalize only closes the proposal. Compact does not prove a tally. Local openings stay in this vault and are not a public yes/no proof.</p>
           <Button type="button" variant="secondary" onClick={() => void refreshLedgers()}>
             Refresh indexer
           </Button>
         </article>
       </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.governance}>
-        <div className="row" style={{ marginTop: 24 }}>
+      <Wave2Gate contractAddress={contracts.governance} ownerSecret={vault.governanceOwnerSecret}>
+        <div id="task-voters" className="row" style={{ marginTop: 24 }}>
           <Button type="button" loading={busy} onClick={() => void registerVoter()}>
             Register voter
           </Button>
         </div>
         <form
+          id="task-proposals"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
@@ -81,6 +86,7 @@ export function GovernancePage() {
           </Button>
         </form>
         <form
+          id="task-ballots"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => event.preventDefault()}
@@ -93,20 +99,44 @@ export function GovernancePage() {
             onChange={(event) => setProposalId(event.target.value)}
             hint="64-char hex from the public proposal row."
           />
+          <label htmlFor="voter-credential">
+            Voter credential
+            <select
+              id="voter-credential"
+              value={voterCommitment}
+              onChange={(event) => setSelectedVoter(event.target.value)}
+              disabled={vault.voters.length === 0}
+            >
+              {vault.voters.length === 0 ? <option value="">Register a voter first</option> : null}
+              {vault.voters.map((item, index) => (
+                <option key={item.holderCommitment} value={item.holderCommitment}>
+                  Voter {index + 1} · {item.holderCommitment.slice(0, 10)}…
+                </option>
+              ))}
+            </select>
+          </label>
           <MaskedValue label="Ballot choice" />
           <div className="row">
             <Button
               type="button"
-              disabled={busy}
-              onClick={() => void castBallot({ proposalId: proposalId.trim(), choice: 1n })}
+              disabled={busy || !voterCommitment}
+              onClick={() => void castBallot({
+                proposalId: proposalId.trim(),
+                choice: 1n,
+                voterCommitment,
+              })}
             >
               Vote yes (private)
             </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={busy}
-              onClick={() => void castBallot({ proposalId: proposalId.trim(), choice: 0n })}
+              disabled={busy || !voterCommitment}
+              onClick={() => void castBallot({
+                proposalId: proposalId.trim(),
+                choice: 0n,
+                voterCommitment,
+              })}
             >
               Vote no (private)
             </Button>

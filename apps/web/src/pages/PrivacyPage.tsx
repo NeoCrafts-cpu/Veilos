@@ -65,9 +65,15 @@ export function PrivacyPage() {
       </div>
       <article className="card" style={{ marginTop: 24 }}>
         <h2>Actor view</h2>
-        <div className="row">
+        <div className="row" role="group" aria-label="Privacy actor view">
           {(["observer", "operator", "holder", "procurement", "auditor"] as const).map((item) => (
-            <button type="button" className="btn ghost" key={item} onClick={() => setActor(item)}>
+            <button
+              type="button"
+              className="btn ghost"
+              key={item}
+              aria-pressed={actor === item}
+              onClick={() => setActor(item)}
+            >
               {item}
             </button>
           ))}

@@ -6,6 +6,7 @@ import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
 import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { validatePolicyAmount } from "../../lib/validation.js";
 import { useEconomy } from "../../state/economy.js";
 import { useSession } from "../../state/session.js";
@@ -21,17 +22,17 @@ export function TreasuryPage() {
     lastResult,
     ledgerError,
     disclosure,
+    publishedEconomy,
     deployEconomy,
     authorizeTreasuryPayment,
     depositNight,
     selectSettlement,
     refreshLedgers,
   } = useEconomy();
+  useTaskSection("/app/treasury", "deposit");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState(wallet?.unshieldedAddress ?? "");
   const [reason, setReason] = useState("");
-  const [perAction, setPerAction] = useState("100");
-  const [daily, setDaily] = useState("100");
   const [deposit, setDeposit] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -43,7 +44,13 @@ export function TreasuryPage() {
       />
       {ledgerError ? <p className="field-error">{ledgerError}</p> : null}
       <div className="privacy-grid" style={{ marginTop: 24 }}>
-        <ContractMeta label="economy-preview" address={contracts.economy} onDeploy={() => void deployEconomy()} busy={busy} />
+        <ContractMeta
+          label="economy-preview"
+          address={contracts.economy}
+          publishedAddress={publishedEconomy?.contractAddress}
+          onDeploy={() => void deployEconomy()}
+          busy={busy}
+        />
         <article className="card blue">
           <h2>Public treasury facts</h2>
           <p>Authorizations {economy?.actionCount.toString() ?? "0"}</p>
@@ -55,8 +62,13 @@ export function TreasuryPage() {
         </article>
       </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.economy}>
+      <Wave2Gate
+        contractAddress={contracts.economy}
+        ownerSecret={vault.economyOwnerSecret}
+        publishedAddress={publishedEconomy?.contractAddress}
+      >
         <form
+          id="task-deposit"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
@@ -84,32 +96,30 @@ export function TreasuryPage() {
           </Button>
         </form>
         <form
+          id="task-authorize"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
             event.preventDefault();
             const parsedAmount = validatePolicyAmount(amount, "Amount");
-            const parsedLimit = validatePolicyAmount(perAction, "Per-action limit");
-            const parsedDaily = validatePolicyAmount(daily, "Daily cap");
             const next: Record<string, string> = {};
             if (parsedAmount.error) next.amount = parsedAmount.error;
-            if (parsedLimit.error) next.perAction = parsedLimit.error;
-            if (parsedDaily.error) next.daily = parsedDaily.error;
             if (!recipient.trim()) next.recipient = "Unshielded recipient is required.";
             if (!reason.trim()) next.reason = "Reason stays private but is required for the intent commitment.";
             setErrors(next);
-            if (Object.keys(next).length || !parsedAmount.amount || !parsedLimit.amount || !parsedDaily.amount) return;
+            if (Object.keys(next).length || !parsedAmount.amount) return;
             void authorizeTreasuryPayment({
               amount: parsedAmount.amount,
               recipient: recipient.trim(),
               reason: reason.trim(),
-              perActionLimit: parsedLimit.amount,
-              dailyLimit: parsedDaily.amount,
             });
           }}
         >
           <h2>Authorize a payment</h2>
-          <p className="muted">Requires a treasury credential on this contract. Compact class 1, vendor, limits, replay, and window.</p>
+          <p className="muted">
+            Requires a treasury credential whose vendor and limits were bound at issue. Compact refuses a different
+            recipient or higher caps.
+          </p>
           <FormField
             id="recipient"
             label="Unshielded recipient"
@@ -120,8 +130,6 @@ export function TreasuryPage() {
             required
           />
           <FormField id="amount" label="Amount" inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value)} required error={errors.amount} />
-          <FormField id="per-action" label="Private per-action limit" inputMode="numeric" value={perAction} onChange={(event) => setPerAction(event.target.value)} error={errors.perAction} />
-          <FormField id="daily" label="Private daily cap" inputMode="numeric" value={daily} onChange={(event) => setDaily(event.target.value)} error={errors.daily} />
           <FormField id="reason" label="Reason (private)" value={reason} onChange={(event) => setReason(event.target.value)} error={errors.reason} required />
           <Button loading={busy} loadingLabel="Proving authorizePayment">
             Prove authorization

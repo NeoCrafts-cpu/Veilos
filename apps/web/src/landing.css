@@ -1,6 +1,7 @@
 .landing {
   min-height: 100vh;
   background: var(--midnight-black);
+  overflow-x: clip;
 }
 
 .landing-nav {

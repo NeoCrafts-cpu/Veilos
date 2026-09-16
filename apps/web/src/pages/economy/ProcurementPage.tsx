@@ -6,6 +6,7 @@ import { PageHeader } from "../../components/PageHeader.js";
 import { PublicId } from "../../components/PublicId.js";
 import { ContractMeta, Wave2CallBanner, Wave2Gate } from "../../components/Wave2Controls.js";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useTaskSection } from "../../hooks/useTaskSection.js";
 import { validatePolicyAmount } from "../../lib/validation.js";
 import { useEconomy } from "../../state/economy.js";
 
@@ -26,11 +27,22 @@ export function ProcurementPage() {
     awardProcurement,
     refreshLedgers,
   } = useEconomy();
+  useTaskSection("/app/procurement", "bidders");
   const [duration, setDuration] = useState("300");
   const [lotId, setLotId] = useState("");
   const [bidAmount, setBidAmount] = useState("");
+  const [selectedBidder, setSelectedBidder] = useState("");
+  const [selectedWinningBid, setSelectedWinningBid] = useState("");
   const [treasuryActionId, setTreasuryActionId] = useState("");
   const [error, setError] = useState<string>();
+  const bidderCommitment = selectedBidder || vault.bidders.at(-1)?.holderCommitment || "";
+  const lotBids = vault.bids.filter((item) => item.procurementId === lotId.trim());
+  const winnerBidCommitment =
+    lotBids.some((item) => item.bidCommitment === selectedWinningBid)
+      ? selectedWinningBid
+      : lotBids.length === 1
+        ? lotBids[0]!.bidCommitment
+        : "";
 
   return (
     <div className="page">
@@ -57,13 +69,14 @@ export function ProcurementPage() {
         </article>
       </div>
       <Wave2CallBanner result={lastResult} />
-      <Wave2Gate contractAddress={contracts.procurement}>
-        <div className="row" style={{ marginTop: 24 }}>
+      <Wave2Gate contractAddress={contracts.procurement} ownerSecret={vault.procurementOwnerSecret}>
+        <div id="task-bidders" className="row" style={{ marginTop: 24 }}>
           <Button type="button" loading={busy} onClick={() => void registerBidder()}>
             Register bidder
           </Button>
         </div>
         <form
+          id="task-lots"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
@@ -84,6 +97,7 @@ export function ProcurementPage() {
           </Button>
         </form>
         <form
+          id="task-bids"
           className="form card"
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
@@ -94,11 +108,31 @@ export function ProcurementPage() {
               return;
             }
             setError(undefined);
-            void submitBid({ procurementId: lotId.trim(), amount: parsed.amount });
+            void submitBid({
+              procurementId: lotId.trim(),
+              amount: parsed.amount,
+              bidderCommitment,
+            });
           }}
         >
           <h2>Submit sealed bid</h2>
           <FormField id="lot-id" label="Procurement id" value={lotId} onChange={(event) => setLotId(event.target.value)} />
+          <label htmlFor="bidder-credential">
+            Bidder credential
+            <select
+              id="bidder-credential"
+              value={bidderCommitment}
+              onChange={(event) => setSelectedBidder(event.target.value)}
+              disabled={vault.bidders.length === 0}
+            >
+              {vault.bidders.length === 0 ? <option value="">Register a bidder first</option> : null}
+              {vault.bidders.map((item, index) => (
+                <option key={item.holderCommitment} value={item.holderCommitment}>
+                  Bidder {index + 1} · {item.holderCommitment.slice(0, 10)}…
+                </option>
+              ))}
+            </select>
+          </label>
           <FormField
             id="bid-amount"
             label="Bid amount (private)"
@@ -109,7 +143,7 @@ export function ProcurementPage() {
             error={error}
           />
           <MaskedValue label="Sealed bid amount" />
-          <Button loading={busy} loadingLabel="Proving submitBid">
+          <Button disabled={!bidderCommitment} loading={busy} loadingLabel="Proving submitBid">
             Commit bid
           </Button>
         </form>
@@ -118,10 +152,30 @@ export function ProcurementPage() {
           style={{ marginTop: 24 }}
           onSubmit={(event) => {
             event.preventDefault();
-            void awardProcurement({ procurementId: lotId.trim(), treasuryActionId: treasuryActionId.trim() });
+            void awardProcurement({
+              procurementId: lotId.trim(),
+              treasuryActionId: treasuryActionId.trim(),
+              winnerBidCommitment,
+            });
           }}
         >
           <h2>Award (bound to treasury authorization)</h2>
+          <label htmlFor="winning-bid">
+            Winning sealed bid
+            <select
+              id="winning-bid"
+              value={winnerBidCommitment}
+              onChange={(event) => setSelectedWinningBid(event.target.value)}
+              disabled={lotBids.length === 0}
+            >
+              {lotBids.length === 0 ? <option value="">Select a lot with a local bid</option> : null}
+              {lotBids.map((item, index) => (
+                <option key={item.bidCommitment} value={item.bidCommitment}>
+                  Bid {index + 1} · {item.bidCommitment.slice(0, 10)}…
+                </option>
+              ))}
+            </select>
+          </label>
           <FormField
             id="treasury-action"
             label="economy-preview action id"
@@ -129,7 +183,7 @@ export function ProcurementPage() {
             onChange={(event) => setTreasuryActionId(event.target.value)}
             hint="Must already exist on the economy-preview authorizations map. Compact 0.23 cannot look up another contract."
           />
-          <Button loading={busy} loadingLabel="Proving awardProcurement">
+          <Button disabled={!winnerBidCommitment} loading={busy} loadingLabel="Proving awardProcurement">
             Award on Midnight
           </Button>
         </form>

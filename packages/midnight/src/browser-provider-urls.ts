@@ -60,8 +60,8 @@ function sameOriginProofProxy(origin: string): string {
 }
 
 /**
- * Browser proving must reach `midnightntwrk/proof-server` or the wallet
- * proving API. Wallet URIs that point at hosted provers are ignored.
+ * HTTP proof-server fallback. Wallet proving uses `getProvingProvider`
+ * instead of this URL. Wallet URIs that point at hosted provers are ignored.
  */
 export function resolveProofServerUrl(
   walletProverServerUri: string | undefined,

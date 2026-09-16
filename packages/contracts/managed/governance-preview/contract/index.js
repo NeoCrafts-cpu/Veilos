@@ -95,20 +95,11 @@ export class Contract {
     if (typeof(witnesses_0.holderSecret) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named holderSecret');
     }
-    if (typeof(witnesses_0.revocationSecret) !== 'function') {
-      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named revocationSecret');
-    }
     if (typeof(witnesses_0.ballotChoice) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named ballotChoice');
     }
     if (typeof(witnesses_0.ballotSalt) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named ballotSalt');
-    }
-    if (typeof(witnesses_0.tallyYes) !== 'function') {
-      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named tallyYes');
-    }
-    if (typeof(witnesses_0.tallyNo) !== 'function') {
-      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named tallyNo');
     }
     this.witnesses = witnesses_0;
     this.circuits = {
@@ -136,14 +127,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('registerVoter',
                                      'argument 1 (as invoked from Typescript)',
-                                     'governance-preview.compact line 103 char 1',
+                                     'governance-preview.compact line 102 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(commitment_0.buffer instanceof ArrayBuffer && commitment_0.BYTES_PER_ELEMENT === 1 && commitment_0.length === 32)) {
           __compactRuntime.typeError('registerVoter',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'governance-preview.compact line 103 char 1',
+                                     'governance-preview.compact line 102 char 1',
                                      'Bytes<32>',
                                      commitment_0)
         }
@@ -172,14 +163,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('revokeVoter',
                                      'argument 1 (as invoked from Typescript)',
-                                     'governance-preview.compact line 112 char 1',
+                                     'governance-preview.compact line 111 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(nullifier_0.buffer instanceof ArrayBuffer && nullifier_0.BYTES_PER_ELEMENT === 1 && nullifier_0.length === 32)) {
           __compactRuntime.typeError('revokeVoter',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'governance-preview.compact line 112 char 1',
+                                     'governance-preview.compact line 111 char 1',
                                      'Bytes<32>',
                                      nullifier_0)
         }
@@ -212,42 +203,42 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 1 (as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(proposalId_0.buffer instanceof ArrayBuffer && proposalId_0.BYTES_PER_ELEMENT === 1 && proposalId_0.length === 32)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'Bytes<32>',
                                      proposalId_0)
         }
         if (!(actionCommitment_0.buffer instanceof ArrayBuffer && actionCommitment_0.BYTES_PER_ELEMENT === 1 && actionCommitment_0.length === 32)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'Bytes<32>',
                                      actionCommitment_0)
         }
         if (!(typeof(voteStart_0) === 'bigint' && voteStart_0 >= 0n && voteStart_0 <= 18446744073709551615n)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 3 (argument 4 as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'Uint<0..18446744073709551616>',
                                      voteStart_0)
         }
         if (!(typeof(voteEnd_0) === 'bigint' && voteEnd_0 >= 0n && voteEnd_0 <= 18446744073709551615n)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 4 (argument 5 as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'Uint<0..18446744073709551616>',
                                      voteEnd_0)
         }
         if (!(quorumCommitment_0.buffer instanceof ArrayBuffer && quorumCommitment_0.BYTES_PER_ELEMENT === 1 && quorumCommitment_0.length === 32)) {
           __compactRuntime.typeError('createProposal',
                                      'argument 5 (argument 6 as invoked from Typescript)',
-                                     'governance-preview.compact line 119 char 1',
+                                     'governance-preview.compact line 118 char 1',
                                      'Bytes<32>',
                                      quorumCommitment_0)
         }
@@ -280,14 +271,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('castBallot',
                                      'argument 1 (as invoked from Typescript)',
-                                     'governance-preview.compact line 143 char 1',
+                                     'governance-preview.compact line 142 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(proposalId_0.buffer instanceof ArrayBuffer && proposalId_0.BYTES_PER_ELEMENT === 1 && proposalId_0.length === 32)) {
           __compactRuntime.typeError('castBallot',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'governance-preview.compact line 143 char 1',
+                                     'governance-preview.compact line 142 char 1',
                                      'Bytes<32>',
                                      proposalId_0)
         }
@@ -316,14 +307,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('finalizeProposal',
                                      'argument 1 (as invoked from Typescript)',
-                                     'governance-preview.compact line 163 char 1',
+                                     'governance-preview.compact line 162 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(proposalId_0.buffer instanceof ArrayBuffer && proposalId_0.BYTES_PER_ELEMENT === 1 && proposalId_0.length === 32)) {
           __compactRuntime.typeError('finalizeProposal',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'governance-preview.compact line 163 char 1',
+                                     'governance-preview.compact line 162 char 1',
                                      'Bytes<32>',
                                      proposalId_0)
         }
@@ -380,7 +371,7 @@ export class Contract {
     if (!(orgId_0.buffer instanceof ArrayBuffer && orgId_0.BYTES_PER_ELEMENT === 1 && orgId_0.length === 32)) {
       __compactRuntime.typeError('Contract state constructor',
                                  'argument 1 (argument 2 as invoked from Typescript)',
-                                 'governance-preview.compact line 97 char 1',
+                                 'governance-preview.compact line 96 char 1',
                                  'Bytes<32>',
                                  orgId_0)
     }
@@ -599,23 +590,6 @@ export class Contract {
     });
     return result_0;
   }
-  _revocationSecret_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
-    const [nextPrivateState_0, result_0] = this.witnesses.revocationSecret(witnessContext_0);
-    context.currentPrivateState = nextPrivateState_0;
-    if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
-      __compactRuntime.typeError('revocationSecret',
-                                 'return value',
-                                 'governance-preview.compact line 38 char 1',
-                                 'Bytes<32>',
-                                 result_0)
-    }
-    partialProofData.privateTranscriptOutputs.push({
-      value: _descriptor_0.toValue(result_0),
-      alignment: _descriptor_0.alignment()
-    });
-    return result_0;
-  }
   _ballotChoice_0(context, partialProofData) {
     const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.ballotChoice(witnessContext_0);
@@ -650,40 +624,6 @@ export class Contract {
     });
     return result_0;
   }
-  _tallyYes_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
-    const [nextPrivateState_0, result_0] = this.witnesses.tallyYes(witnessContext_0);
-    context.currentPrivateState = nextPrivateState_0;
-    if (!(typeof(result_0) === 'bigint' && result_0 >= 0n && result_0 <= 18446744073709551615n)) {
-      __compactRuntime.typeError('tallyYes',
-                                 'return value',
-                                 'governance-preview.compact line 41 char 1',
-                                 'Uint<0..18446744073709551616>',
-                                 result_0)
-    }
-    partialProofData.privateTranscriptOutputs.push({
-      value: _descriptor_1.toValue(result_0),
-      alignment: _descriptor_1.alignment()
-    });
-    return result_0;
-  }
-  _tallyNo_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
-    const [nextPrivateState_0, result_0] = this.witnesses.tallyNo(witnessContext_0);
-    context.currentPrivateState = nextPrivateState_0;
-    if (!(typeof(result_0) === 'bigint' && result_0 >= 0n && result_0 <= 18446744073709551615n)) {
-      __compactRuntime.typeError('tallyNo',
-                                 'return value',
-                                 'governance-preview.compact line 42 char 1',
-                                 'Uint<0..18446744073709551616>',
-                                 result_0)
-    }
-    partialProofData.privateTranscriptOutputs.push({
-      value: _descriptor_1.toValue(result_0),
-      alignment: _descriptor_1.alignment()
-    });
-    return result_0;
-  }
   _encodeUint64_0(n_0) {
     return __compactRuntime.convertFieldToBytes(32,
                                                 n_0,
@@ -697,10 +637,9 @@ export class Contract {
     return this._persistentHash_0([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 104, 111, 108, 100, 101, 114, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                    sk_0]);
   }
-  _voterRevocationOf_0(holder_0, secret_0) {
-    return this._persistentHash_2([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 118, 111, 116, 101, 114, 114, 101, 118, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-                                   holder_0,
-                                   secret_0]);
+  _voterRevocationOf_0(holder_0) {
+    return this._persistentHash_0([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 118, 111, 116, 101, 114, 114, 101, 118, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+                                   holder_0]);
   }
   _ballotCommitmentOf_0(proposalId_0, holder_0, choice_0, salt_0) {
     return this._persistentHash_1([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 98, 97, 108, 108, 111, 116, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -1020,9 +959,7 @@ export class Contract {
                                                                                        { popeq: { cached: true,
                                                                                                   result: undefined } }]).value),
                             'not a voter');
-    const revoked_0 = this._voterRevocationOf_0(holder_0,
-                                                this._revocationSecret_0(context,
-                                                                         partialProofData));
+    const revoked_0 = this._voterRevocationOf_0(holder_0);
     __compactRuntime.assert(!_descriptor_4.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                        partialProofData,
                                                                                        [
@@ -1161,15 +1098,13 @@ export class Contract {
                                                                                         { popeq: { cached: true,
                                                                                                    result: undefined } }]).value)),
                             'vote still open');
-    const yes_0 = this._tallyYes_0(context, partialProofData);
-    const no_0 = this._tallyNo_0(context, partialProofData);
     const tmp_1 = { actionCommitment: proposal_0.actionCommitment,
                     voteStart: proposal_0.voteStart,
                     voteEnd: proposal_0.voteEnd,
                     quorumCommitment: proposal_0.quorumCommitment,
                     status: 1,
-                    yesCount: yes_0,
-                    noCount: no_0 };
+                    yesCount: 0n,
+                    noCount: 0n };
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
                                       [
@@ -1777,11 +1712,8 @@ const _emptyContext = {
 const _dummyContract = new Contract({
   ownerSecret: (...args) => undefined,
   holderSecret: (...args) => undefined,
-  revocationSecret: (...args) => undefined,
   ballotChoice: (...args) => undefined,
-  ballotSalt: (...args) => undefined,
-  tallyYes: (...args) => undefined,
-  tallyNo: (...args) => undefined
+  ballotSalt: (...args) => undefined
 });
 export const pureCircuits = {
   ownerCommitmentOf: (...args_0) => {
@@ -1813,11 +1745,10 @@ export const pureCircuits = {
     return _dummyContract._holderCommitmentOf_0(sk_0);
   },
   voterRevocationOf: (...args_0) => {
-    if (args_0.length !== 2) {
-      throw new __compactRuntime.CompactError(`voterRevocationOf: expected 2 arguments (as invoked from Typescript), received ${args_0.length}`);
+    if (args_0.length !== 1) {
+      throw new __compactRuntime.CompactError(`voterRevocationOf: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
     }
     const holder_0 = args_0[0];
-    const secret_0 = args_0[1];
     if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
       __compactRuntime.typeError('voterRevocationOf',
                                  'argument 1',
@@ -1825,14 +1756,7 @@ export const pureCircuits = {
                                  'Bytes<32>',
                                  holder_0)
     }
-    if (!(secret_0.buffer instanceof ArrayBuffer && secret_0.BYTES_PER_ELEMENT === 1 && secret_0.length === 32)) {
-      __compactRuntime.typeError('voterRevocationOf',
-                                 'argument 2',
-                                 'governance-preview.compact line 62 char 1',
-                                 'Bytes<32>',
-                                 secret_0)
-    }
-    return _dummyContract._voterRevocationOf_0(holder_0, secret_0);
+    return _dummyContract._voterRevocationOf_0(holder_0);
   },
   ballotCommitmentOf: (...args_0) => {
     if (args_0.length !== 4) {
@@ -1845,28 +1769,28 @@ export const pureCircuits = {
     if (!(proposalId_0.buffer instanceof ArrayBuffer && proposalId_0.BYTES_PER_ELEMENT === 1 && proposalId_0.length === 32)) {
       __compactRuntime.typeError('ballotCommitmentOf',
                                  'argument 1',
-                                 'governance-preview.compact line 70 char 1',
+                                 'governance-preview.compact line 69 char 1',
                                  'Bytes<32>',
                                  proposalId_0)
     }
     if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
       __compactRuntime.typeError('ballotCommitmentOf',
                                  'argument 2',
-                                 'governance-preview.compact line 70 char 1',
+                                 'governance-preview.compact line 69 char 1',
                                  'Bytes<32>',
                                  holder_0)
     }
     if (!(typeof(choice_0) === 'bigint' && choice_0 >= 0n && choice_0 <= 18446744073709551615n)) {
       __compactRuntime.typeError('ballotCommitmentOf',
                                  'argument 3',
-                                 'governance-preview.compact line 70 char 1',
+                                 'governance-preview.compact line 69 char 1',
                                  'Uint<0..18446744073709551616>',
                                  choice_0)
     }
     if (!(salt_0.buffer instanceof ArrayBuffer && salt_0.BYTES_PER_ELEMENT === 1 && salt_0.length === 32)) {
       __compactRuntime.typeError('ballotCommitmentOf',
                                  'argument 4',
-                                 'governance-preview.compact line 70 char 1',
+                                 'governance-preview.compact line 69 char 1',
                                  'Bytes<32>',
                                  salt_0)
     }
@@ -1884,14 +1808,14 @@ export const pureCircuits = {
     if (!(proposalId_0.buffer instanceof ArrayBuffer && proposalId_0.BYTES_PER_ELEMENT === 1 && proposalId_0.length === 32)) {
       __compactRuntime.typeError('voteNullifierOf',
                                  'argument 1',
-                                 'governance-preview.compact line 85 char 1',
+                                 'governance-preview.compact line 84 char 1',
                                  'Bytes<32>',
                                  proposalId_0)
     }
     if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
       __compactRuntime.typeError('voteNullifierOf',
                                  'argument 2',
-                                 'governance-preview.compact line 85 char 1',
+                                 'governance-preview.compact line 84 char 1',
                                  'Bytes<32>',
                                  holder_0)
     }

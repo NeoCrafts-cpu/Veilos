@@ -5,12 +5,13 @@ export type MidnightTxStatus = "SucceedEntirely" | "FailFallible" | "FailEntirel
 
 export const PUBLIC_ERROR_MESSAGES = {
   environment_missing: "Wallet, proof server, indexer, or operator access is not ready.",
+  wallet_missing: "No Midnight wallet found. Install Lace or 1AM on Preview, then retry.",
   wallet_rejected: "The wallet declined the transaction. Approve the popup to retry.",
   submit_failed: "Midnight could not finish the proof or submit the transaction.",
   policy_violation: "Midnight rejected the proof. The private constraint is not disclosed.",
   proof_rejected: "Midnight rejected the proof. The private constraint is not disclosed.",
   indexer_stale: "The transaction was submitted. The indexer has not confirmed the public action yet.",
-  hosted_prover: "This app proves through the local proof server, not a hosted prover.",
+  hosted_prover: "This app proves through the wallet Proof Station or a local proof server, not a hosted HTTP prover.",
 } as const;
 
 export function outcomeFromTxStatus(input: {
@@ -118,6 +119,9 @@ export function explainCaughtError(error: unknown, fallback: string): string {
   if (/1am\.xyz/i.test(message)) return PUBLIC_ERROR_MESSAGES.hosted_prover;
   if (/request failed/i.test(message) && !/DUST/i.test(message)) return PUBLIC_ERROR_MESSAGES.submit_failed;
   if (/econnrefused|environment missing|fetch/i.test(message)) return PUBLIC_ERROR_MESSAGES.environment_missing;
+  if (/no midnight wallet|wallet found|install a midnight wallet|connect a midnight wallet first/i.test(message)) {
+    return PUBLIC_ERROR_MESSAGES.wallet_missing;
+  }
   if (/wallet|permission|disconnect|dust/i.test(message)) return PUBLIC_ERROR_MESSAGES.wallet_rejected;
   if (CIRCUIT_ASSERT_MESSAGES.some((needle) => message.toLowerCase().includes(needle))) {
     return PUBLIC_ERROR_MESSAGES.policy_violation;
@@ -129,7 +133,14 @@ export function outcomeFromCaughtError(error: unknown): AuthorizationOutcome {
   const raw = error instanceof Error ? error.message : "";
   const message = explainCaughtError(error, "failed");
   const lower = `${raw} ${message}`.toLowerCase();
-  if (lower.includes("environment") || lower.includes("econnrefused") || lower.includes("fetch")) {
+  if (
+    lower.includes("no midnight wallet") ||
+    lower.includes("wallet found") ||
+    lower.includes("install lace") ||
+    lower.includes("environment") ||
+    lower.includes("econnrefused") ||
+    lower.includes("fetch")
+  ) {
     return { kind: "failed", code: "environment_missing" };
   }
   if (

@@ -22,6 +22,7 @@ export type DisclosureBundle = {
   anchors: Record<string, string>;
   expires: bigint;
   auditorId: Uint8Array;
+  nonce: Uint8Array;
 };
 
 export async function encryptDisclosureBundle(
@@ -84,6 +85,7 @@ export function createDisclosure(input: {
     anchors: input.anchors,
     expires: input.grant.expires,
     auditorId: input.grant.auditorId,
+    nonce: input.grant.nonce,
   };
 }
 
@@ -93,6 +95,15 @@ export function verifyDisclosure(
 ): void {
   if (input.now > bundle.expires) throw new Error("grant expired");
   if (!Buffer.from(bundle.auditorId).equals(Buffer.from(input.auditorId))) throw new Error("wrong auditor");
+  const claimsBytes = new TextEncoder().encode(JSON.stringify(Object.keys(bundle.claims).sort()));
+  const padded = new Uint8Array(32);
+  padded.set(claimsBytes.slice(0, 32));
+  const expected = disclosureScopeCommitment({
+    auditorId: bundle.auditorId,
+    claims: padded,
+    nonce: bundle.nonce,
+  });
+  if (!Buffer.from(expected).equals(Buffer.from(bundle.grantCommitment))) throw new Error("modified claims");
   for (const [key, value] of Object.entries(input.expectedAnchors)) {
     if (bundle.anchors[key] !== value) throw new Error("modified claims");
   }

@@ -6,7 +6,7 @@ import { JourneyLayout } from "../components/JourneyLayout.js";
 import { RecoveryPanel } from "../components/RecoveryPanel.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { localRefuseCopy } from "../lib/result-copy.js";
-import { validatePolicyAmount, validateReason } from "../lib/validation.js";
+import { validateAuthorizationDraft } from "../lib/validation.js";
 import { useSession } from "../state/session.js";
 import { AUTH_STEPS } from "./setup/steps.js";
 
@@ -29,18 +29,21 @@ export function ActionPage() {
       current={0}
       actions={
         <Button
+          disabled={blocked}
           onClick={() => {
-            const amount = validatePolicyAmount(authDraft.amount, "Amount");
-            const recipient = authDraft.recipient.trim() ? undefined : "Recipient is required.";
-            const reason = validateReason(authDraft.reason);
+            const validation = validateAuthorizationDraft(authDraft);
             setErrors({
-              ...(recipient ? { recipient } : {}),
-              ...(amount.error ? { amount: amount.error } : {}),
-              ...(reason ? { reason } : {}),
+              ...(validation.recipient ? { recipient: validation.recipient } : {}),
+              ...(validation.amount ? { amount: validation.amount } : {}),
+              ...(validation.reason ? { reason: validation.reason } : {}),
             });
-            if (recipient || amount.error || reason || amount.amount === undefined) return;
-            if (blocked) return;
-            const preview = previewPayment({ recipient: authDraft.recipient.trim(), amount: amount.amount });
+            if (validation.recipient || validation.amount || validation.reason || validation.parsedAmount === undefined) {
+              return;
+            }
+            const preview = previewPayment({
+              recipient: authDraft.recipient.trim(),
+              amount: validation.parsedAmount,
+            });
             if (!preview.allowed) {
               setLocalRefuse(preview.code);
               return;

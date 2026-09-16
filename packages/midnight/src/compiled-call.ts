@@ -84,15 +84,12 @@ export async function deployNamedOrganization(input: {
     args: [hex32ToBytes(organizationId)],
   } as never);
   const contractAddress = readContractAddress(deployed);
-  const status = readTxStatus((deployed as { deployTxData?: unknown }).deployTxData);
+  const status = requireSucceedEntirely(readTxStatus((deployed as { deployTxData?: unknown }).deployTxData));
   const txId = readTxId((deployed as { deployTxData?: unknown }).deployTxData);
-  if (status && status !== MIDNIGHT_SUCCESS_STATUS) {
-    throw new Error("deploy failed");
-  }
   if (!contractAddress) {
     throw new Error("deploy failed");
   }
-  return { contractAddress, organizationId, status: status || MIDNIGHT_SUCCESS_STATUS, txId };
+  return { contractAddress, organizationId, status, txId };
 }
 
 export async function submitNamedCircuit(input: {
@@ -118,6 +115,13 @@ export async function submitNamedCircuit(input: {
     txId: readTxId(finalized),
     submitted: status === MIDNIGHT_SUCCESS_STATUS,
   };
+}
+
+export function requireSucceedEntirely(status: string): string {
+  if (status !== MIDNIGHT_SUCCESS_STATUS) {
+    throw new Error("deploy failed");
+  }
+  return status;
 }
 
 export { readContractAddress, readTxId, readTxStatus };

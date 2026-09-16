@@ -51,6 +51,7 @@ describe("Wave 2 compiled economy", () => {
         "bidSalt",
         "bidAmount",
         "awardSalt",
+        "winnerHolder",
       ].map((name) => [name, () => undefined]),
     );
     const instance = new (loaded!.Contract as new (w: unknown) => {

@@ -18,6 +18,9 @@ describe("economy witnesses", () => {
       "dailyLimit",
       "spendPeriodStart",
       "spendDaily",
+      "spendSalt",
+      "nextSpendSalt",
+      "policySalt",
       "ballotChoice",
       "ballotSalt",
       "tallyYes",
@@ -25,6 +28,7 @@ describe("economy witnesses", () => {
       "bidSalt",
       "bidAmount",
       "awardSalt",
+      "winnerHolder",
     ];
     for (const name of required) {
       expect(typeof economyWitnesses[name as keyof typeof economyWitnesses], name).toBe("function");

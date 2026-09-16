@@ -44,16 +44,36 @@ describe("Wave 1 UI", () => {
   it("keeps authorization copy on the request form", () => {
     renderAt("/app/authorize/new");
     expect(screen.getByLabelText(/amount/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /review authorization/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /review authorization/i }).hasAttribute("disabled")).toBe(true);
     expect(screen.getAllByText(/does not transfer funds/i).length).toBeGreaterThan(0);
+  });
+
+  it("fails closed when authorization review is opened without a valid draft", () => {
+    renderAt("/app/authorize/review");
+    expect(screen.getByText(/request details need review/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /authorize request on midnight/i }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows recovery instead of silently redirecting unknown workspace routes", () => {
+    renderAt("/app/treasry");
+    expect(screen.getByRole("heading", { name: /page not found/i })).toBeTruthy();
+    expect(screen.getByText(/no wallet or blockchain action was attempted/i)).toBeTruthy();
+  });
+
+  it("does not claim the local proof-server is ready before a wallet connects", () => {
+    renderAt("/app/setup");
+    expect(screen.getByRole("heading", { name: /check readiness/i })).toBeTruthy();
+    expect(screen.getByText(/Connect a Midnight wallet\. Hosted UI does not include a proof server/i)).toBeTruthy();
+    expect(screen.queryByText(/Local proof-server on loopback/i)).toBeNull();
   });
 
   it("exposes a skip link in the app shell", () => {
     renderAt("/app");
     expect(screen.getAllByRole("link", { name: /skip to main content/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("navigation", { name: /primary/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: /^get started$/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^readiness$/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /^docs$/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^issue$/i })).toBeTruthy();
   });
 
   it("P4 public session slice has no policy integers", () => {

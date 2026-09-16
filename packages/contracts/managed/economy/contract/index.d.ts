@@ -12,7 +12,6 @@ export type Witnesses<PS> = {
                                                                                        goes_left: boolean
                                                                                      }[]
                                                                              }];
-  revocationSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   intentSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   reasonDigestW(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   vendorId(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
@@ -20,13 +19,14 @@ export type Witnesses<PS> = {
   dailyLimit(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   spendPeriodStart(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   spendDaily(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
+  spendSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  nextSpendSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   ballotChoice(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   ballotSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  tallyYes(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
-  tallyNo(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   bidSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   bidAmount(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   awardSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  winnerHolder(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
 }
 
 export type ImpureCircuits<PS> = {
@@ -126,8 +126,15 @@ export type PureCircuits = {
                          org_0: Uint8Array,
                          classId_0: bigint,
                          expiry_0: bigint,
-                         salt_0: Uint8Array): Uint8Array;
-  revocationNullifierOf(commitment_0: Uint8Array, secret_0: Uint8Array): Uint8Array;
+                         salt_0: Uint8Array,
+                         vendor_0: Uint8Array,
+                         perAction_0: bigint,
+                         daily_0: bigint): Uint8Array;
+  revocationNullifierOf(commitment_0: Uint8Array): Uint8Array;
+  spendCommitmentOf(periodStart_0: bigint,
+                    dailySpend_0: bigint,
+                    salt_0: Uint8Array): Uint8Array;
+  bidKeyOf(procurementId_0: Uint8Array, holder_0: Uint8Array): Uint8Array;
   intentCommitmentOf(actionId_0: Uint8Array,
                      agentId_0: Uint8Array,
                      org_0: Uint8Array,
@@ -164,10 +171,19 @@ export type Circuits<PS> = {
                          org_0: Uint8Array,
                          classId_0: bigint,
                          expiry_0: bigint,
-                         salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                         salt_0: Uint8Array,
+                         vendor_0: Uint8Array,
+                         perAction_0: bigint,
+                         daily_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   revocationNullifierOf(context: __compactRuntime.CircuitContext<PS>,
-                        commitment_0: Uint8Array,
-                        secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                        commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  spendCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
+                    periodStart_0: bigint,
+                    dailySpend_0: bigint,
+                    salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  bidKeyOf(context: __compactRuntime.CircuitContext<PS>,
+           procurementId_0: Uint8Array,
+           holder_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   intentCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                      actionId_0: Uint8Array,
                      agentId_0: Uint8Array,
@@ -380,6 +396,7 @@ export type Ledger = {
                                };
     [Symbol.iterator](): Iterator<[Uint8Array, { auditorId: Uint8Array, scopeCommitment: Uint8Array, expires: bigint }]>
   };
+  readonly spendCommitment: Uint8Array;
 }
 
 export type ContractReferenceLocations = any;

@@ -178,8 +178,7 @@ export async function runPreviewDeploy(
     console.log(`Seed file: ${seedPath}`);
     console.log("Set VELIOS_WALLET_SEED from that file. Do not commit it.");
     if (argv.includes("--print-seed")) {
-      console.log("New Wallet Seed — save this before continuing. It will not be shown again.");
-      console.log(secret.value);
+      console.log("Refusing --print-seed. The seed is in the 0600 file only.");
     }
   }
 

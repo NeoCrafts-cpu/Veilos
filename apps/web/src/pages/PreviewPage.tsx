@@ -66,6 +66,10 @@ export function PreviewPage() {
             <PublicId label="Agent id" value={agent.agentId} />
             <PublicId label="Policy commitment" value={agent.policyCommitment} />
           </>
+        ) : publicStore.ledgerSync === "pending" ? (
+          <p className="muted" role="status">
+            Loading public agent from the Midnight indexer…
+          </p>
         ) : (
           <EmptyState title="No public agent yet" body="The indexer has not returned an agent for this contract." />
         )}

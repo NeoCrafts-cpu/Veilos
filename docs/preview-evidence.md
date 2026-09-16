@@ -26,3 +26,7 @@ The full 12-circuit `economy.compact` deploy was submitted and rejected by Previ
 - Indexer: `contractAction` typename `ContractDeploy`; `contract(address)` returns this address
 
 Credential issuance, authorize, and unshielded settlement txs are not retained yet.
+
+Companion `governance-preview`, `procurement-preview`, and `auditor-preview` addresses are created from the operator app. They are not baked into git until a `SucceedEntirely` deploy plus exact indexer row is retained here.
+
+Live cases W2-L1–W2-L7 stay gated on `VELIOS_LIVE_PREVIEW=1` plus a real wallet and proof provider. Local replica tests are not Preview evidence.

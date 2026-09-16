@@ -4,6 +4,7 @@ import {
   carriedSpend,
   currentAuthorizationWindow,
   nowSeconds,
+  spendBucketMayOpen,
   windowIsSafeToSubmit,
   PERIOD_SECONDS,
 } from "./period.js";
@@ -63,5 +64,15 @@ describe("U11 authorization window", () => {
     expect(() => carriedSpend(window.periodStart + PERIOD_SECONDS, 0n, window)).toThrow(
       /stale period/,
     );
+  });
+
+  it("refuses a new spend bucket until the committed day has elapsed", () => {
+    const window = authorizationWindow(1_700_000_000n);
+    const previous = window.periodStart - PERIOD_SECONDS;
+    expect(spendBucketMayOpen(0n, window, window.periodStart + 3600n)).toBe(true);
+    expect(spendBucketMayOpen(window.periodStart, window, window.periodStart + 3600n)).toBe(true);
+    expect(spendBucketMayOpen(previous, window, previous + PERIOD_SECONDS)).toBe(false);
+    expect(spendBucketMayOpen(previous, window, previous + PERIOD_SECONDS + 1n)).toBe(true);
+    expect(spendBucketMayOpen(window.periodStart + PERIOD_SECONDS, window, window.periodStart + 3600n)).toBe(false);
   });
 });

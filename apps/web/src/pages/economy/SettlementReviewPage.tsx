@@ -62,7 +62,7 @@ export function SettlementReviewPage() {
           Cancel
         </Link>
       </div>
-      <Wave2Gate contractAddress={contracts.economy}>
+      <Wave2Gate contractAddress={contracts.economy} ownerSecret={vault.economyOwnerSecret}>
         {alreadySettled ? (
           <p>This action already has a settlement row on the indexer.</p>
         ) : (

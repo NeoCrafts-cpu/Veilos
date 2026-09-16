@@ -59,11 +59,10 @@ export circuit holderCommitmentOf(sk: Bytes<32>): Bytes<32> {
   ]);
 }
 
-export circuit voterRevocationOf(holder: Bytes<32>, secret: Bytes<32>): Bytes<32> {
-  return persistentHash<Vector<3, Bytes<32>>>([
+export circuit voterRevocationOf(holder: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
     pad(32, "velios:voterrev:"),
-    holder,
-    secret
+    holder
   ]);
 }
 
@@ -149,7 +148,7 @@ export circuit castBallot(proposalId: Bytes<32>): [] {
   assert(!kernel.blockTimeGreaterThan(proposal.voteEnd), "vote elapsed");
   const holder = holderCommitmentOf(holderSecret());
   assert(voters.member(disclose(holder)), "not a voter");
-  const revoked = voterRevocationOf(holder, revocationSecret());
+  const revoked = voterRevocationOf(holder);
   assert(!revokedVoters.member(disclose(revoked)), "voter revoked");
   const nullifier = voteNullifierOf(publicId, holder);
   assert(!voteNullifiers.member(disclose(nullifier)), "already voted");
@@ -167,15 +166,13 @@ export circuit finalizeProposal(proposalId: Bytes<32>): [] {
   const proposal = proposals.lookup(publicId);
   assert(proposal.status == ProposalStatus.open, "proposal closed");
   assert(kernel.blockTimeGreaterThan(proposal.voteEnd), "vote still open");
-  const yes = tallyYes();
-  const no = tallyNo();
   proposals.insert(publicId, ProposalPublic {
     actionCommitment: proposal.actionCommitment,
     voteStart: proposal.voteStart,
     voteEnd: proposal.voteEnd,
     quorumCommitment: proposal.quorumCommitment,
     status: ProposalStatus.finalized,
-    yesCount: disclose(yes),
-    noCount: disclose(no)
+    yesCount: 0,
+    noCount: 0
   });
 }

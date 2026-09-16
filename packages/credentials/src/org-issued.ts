@@ -6,7 +6,7 @@ export function issueOrganizationCredential(input: CredentialIssueInput): Issued
   const commitment = credentialCommitment(input);
   return {
     commitment,
-    revocationNullifier: revocationNullifier(commitment, input.revocationSecret),
+    revocationNullifier: revocationNullifier(commitment),
     className: input.className,
     organizationId: input.organizationId,
     expiry: input.expiry,

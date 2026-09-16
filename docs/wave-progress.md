@@ -20,7 +20,7 @@
 | Claim | Status |
 | --- | --- |
 | Implemented in-repo | Yes — `economy-preview.compact` on Preview plus Preview-sized governance/procurement/auditor companions, wired through MidnightJS `submitCallTx` and indexer read-back |
-| UI | Credentials, treasury/settle, governance, procurement, auditor tabs execute real circuits. Docs lives in the main nav. |
+| UI | Workspace sidebar groups Home/Readiness/Preview, authorization, organization, and every Wave 2 task. Credentials, treasury/settle, governance, procurement, and auditor execute real circuits. Docs is a first-class `/docs` route. |
 | Tested | Unit/replica/UI leakage tests; Compact circuit presence when artifacts exist; economy ledger projection and fail-closed confirmation tests |
 | Proven on Preview | `economy-preview` deploy is retained. Full 12-circuit `economy.compact` cannot deploy (block limits). Companion addresses are deployed from the app, not baked until SucceedEntirely. |
 
@@ -76,9 +76,10 @@ circuits. See `docs/contract-spec.md` §6.7.
   persisted in an encrypted contract-scoped vault (optional labelled DEV import,
   downloadable encrypted backup).
   `authorizeAction` uses indexer `block.timestamp`, not `Date.now()`.
-- The proof provider is HTTP-only (`httpClientProofProvider`) and so is
-  incompatible with 1AM's IN-BROWSER (WASM) mode; that path needs
-  `getProvingProvider` + `createProofProvider`.
+- Browser proving prefers official DApp Connector `getProvingProvider` +
+  MidnightJS `createProofProvider` (wallet Proof Station / in-wallet proving).
+  The local HTTP proof-server is the fallback when the wallet cannot prove.
+  Hosted 1AM HTTP prover URIs stay rejected.
 - Preview deploy uses the official Node Wallet SDK CLI (`pnpm deploy:preview`),
   not 1AM Generate DUST. Wave 1 constructor + `registerMember` are on Preview
   (`SucceedEntirely`). Public address is in gitignored `deployment.json`.

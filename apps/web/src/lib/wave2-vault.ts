@@ -27,7 +27,16 @@ export type StoredCredentialRecord = {
   holderSecret: string;
   salt: string;
   revocationSecret: string;
+  vendorCommitment?: string;
+  perActionLimit?: string;
+  dailyLimit?: string;
   txId?: string;
+};
+
+export type StoredTreasurySpend = {
+  periodStart: string;
+  dailySpend: string;
+  spendSalt: string;
 };
 
 export type StoredPaymentRecord = {
@@ -86,6 +95,7 @@ export type Wave2VaultPayload = {
   ballots: StoredBallotRecord[];
   bidders: StoredMembershipRecord[];
   bids: StoredBidRecord[];
+  treasurySpend?: StoredTreasurySpend;
 };
 
 export function emptyWave2Vault(): Wave2VaultPayload {

@@ -26,7 +26,7 @@ Maps the Midnight Hackathon 100-point rubric to this repo. Judges: start at the 
 
 | Skill | Evidence |
 | --- | --- |
-| Working interface | https://veilos-web.vercel.app |
+| Working interface | https://veilos-web-ten.vercel.app |
 | Navigation | Get Started vs Explore Preview; guided setup |
 | Design cohesion | Midnight tokens (`packages/ui/src/tokens.css`): black / off-white / `#0000FF` / `#B9FF00` |
 | Interactivity | Wallet connect, readiness checklist, transaction progress |

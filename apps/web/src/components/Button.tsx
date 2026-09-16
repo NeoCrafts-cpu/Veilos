@@ -29,8 +29,15 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
   const label = loading ? loadingLabel ?? "Working…" : children;
 
   if ("to" in props && props.to) {
+    if (props.disabled || loading) {
+      return (
+        <span className={classes} aria-disabled="true" aria-busy={loading}>
+          {label}
+        </span>
+      );
+    }
     return (
-      <Link className={classes} to={props.to} aria-disabled={props.disabled || loading} aria-busy={loading}>
+      <Link className={classes} to={props.to} aria-busy={false}>
         {label}
       </Link>
     );

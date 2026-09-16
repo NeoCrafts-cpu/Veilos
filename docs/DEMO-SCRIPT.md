@@ -4,7 +4,7 @@ Record in one take. Upload to **public YouTube**. Paste the URL on AKINDO.
 
 Speak to a **non-technical** judge for the first 30 seconds. Then show the UI.
 
-**On screen:** https://veilos-web.vercel.app → `/app/preview` → `/app/privacy` → credentials/treasury if time.
+**On screen:** https://veilos-web-ten.vercel.app → `/app/preview` → `/app/privacy` → credentials/treasury if time.
 
 ---
 

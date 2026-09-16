@@ -78,6 +78,17 @@ describe("transaction status mapping", () => {
     }
   });
 
+  it("does not call a missing wallet a declined transaction", () => {
+    expect(explainCaughtError(new Error("No Midnight wallet found. Install a Midnight wallet extension."), "failed")).toMatch(
+      /Install Lace or 1AM/,
+    );
+    expect(explainCaughtError(new Error("Connect a Midnight wallet first."), "failed")).toMatch(/Install Lace or 1AM/);
+    expect(outcomeFromCaughtError(new Error("No Midnight wallet found. Install a Midnight wallet extension."))).toEqual({
+      kind: "failed",
+      code: "environment_missing",
+    });
+  });
+
   it("maps a wallet Request failed submit to a public wallet rejection", () => {
     const outcome = outcomeFromCaughtError(
       new Error("Unexpected error submitting scoped transaction '<unnamed>': Error: Request failed"),

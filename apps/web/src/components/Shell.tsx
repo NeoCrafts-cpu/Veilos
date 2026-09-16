@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
-import { networkLabel, shortAddress } from "../lib/format.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Outlet } from "react-router-dom";
+import { shortAddress } from "../lib/format.js";
+import { readSidebarHidden, writeSidebarHidden } from "../lib/workspace.js";
 import { useSession } from "../state/session.js";
 import { Banner } from "./Banner.js";
-import { Logo } from "./Logo.js";
 import { RouteAnnouncer } from "./RouteAnnouncer.js";
+import { Sidebar } from "./Sidebar.js";
 import { SkipLink } from "./SkipLink.js";
-import { StatusChip } from "./StatusChip.js";
 
 const BUSY_COPY: Record<string, string> = {
   createAgent: "Creating the agent on Midnight. Keep this tab open and approve the wallet popup.",
@@ -25,110 +25,92 @@ const BUSY_COPY: Record<string, string> = {
 
 export function Shell() {
   const {
-    network,
     wallet,
-    networkLive,
     connectWallet,
     disconnectWallet,
-    publicStore,
     walletError,
     ledgerError,
-    dustReady,
     busyAction,
-    workspaceMode,
+    walletReconnectNeeded,
   } = useSession();
   const [navOpen, setNavOpen] = useState(false);
-  const onChain = publicStore.ledgerSync === "confirmed";
-  const workspaceLabel =
-    workspaceMode === "preview" ? "Public preview" : workspaceMode === "owner" ? "Owner" : "Choose a path";
-  const closeNav = () => setNavOpen(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const closeNav = useCallback(() => setNavOpen(false), []);
+  const hideSidebar = useCallback(() => {
+    const mobile = typeof window !== "undefined" && window.matchMedia?.("(max-width: 1080px)")?.matches === true;
+    if (mobile) {
+      setNavOpen(false);
+      return;
+    }
+    setSidebarHidden(true);
+    writeSidebarHidden(true);
+    setNavOpen(false);
+  }, []);
+  const showSidebar = useCallback(() => {
+    setSidebarHidden(false);
+    writeSidebarHidden(false);
+  }, []);
+
+  useEffect(() => {
+    setSidebarHidden(readSidebarHidden());
+  }, []);
 
   return (
-    <div className="shell">
+    <div className={`workspace${sidebarHidden ? " is-sidebar-hidden" : ""}`}>
       <SkipLink />
       <RouteAnnouncer />
-      <header className="nav">
-        <div className="nav-brand-block">
-          <Link to="/app" className="brand-lockup-link">
-            <Logo size={40} />
-          </Link>
-          <div className="brand-sub">{publicStore.organizationName}</div>
-          <div className="status-live">
-            <StatusChip
-              tone={onChain || networkLive ? "ok" : "warn"}
-              label={`Midnight · ${networkLabel(network.networkId)}`}
-            />
-            <StatusChip tone={onChain ? "ok" : "neutral"} label={workspaceLabel} />
-            {dustReady === false ? <StatusChip tone="warn" label="No DUST" /> : null}
-          </div>
-        </div>
-        <div className="nav-tools">
-          {wallet ? (
-            <button type="button" className="btn ghost wallet-chip" onClick={disconnectWallet}>
-              {wallet.unshieldedAddress ? shortAddress(wallet.unshieldedAddress) : "Disconnect"}
-            </button>
-          ) : (
-            <button type="button" className="btn" onClick={() => void connectWallet()}>
-              Connect wallet
-            </button>
-          )}
+      {navOpen ? (
+        <button type="button" className="sidebar-backdrop" aria-label="Close menu" onClick={closeNav} />
+      ) : null}
+      <Sidebar open={navOpen} hidden={sidebarHidden} onClose={closeNav} onHide={hideSidebar} toggleRef={toggleRef} />
+      <div className="workspace-main">
+        <header className="workspace-top">
           <button
+            ref={toggleRef}
             type="button"
             className="btn ghost nav-toggle"
             aria-expanded={navOpen}
-            aria-controls="primary-nav"
+            aria-controls="workspace-sidebar"
             onClick={() => setNavOpen((open) => !open)}
           >
             {navOpen ? "Close" : "Menu"}
           </button>
-        </div>
-      </header>
-      <nav id="primary-nav" className={`tabs${navOpen ? " is-open" : ""}`} aria-label="Primary">
-        <NavLink to="/app/setup" onClick={closeNav}>
-          Get Started
-        </NavLink>
-        <NavLink to="/app" end onClick={closeNav}>
-          Home
-        </NavLink>
-        <NavLink to="/app/authorize/new" onClick={closeNav}>
-          Authorize
-        </NavLink>
-        <NavLink to="/app/actions" onClick={closeNav}>
-          Activity
-        </NavLink>
-        <NavLink to="/app/org" onClick={closeNav}>
-          Organization
-        </NavLink>
-        <NavLink to="/app/privacy" onClick={closeNav}>
-          Privacy
-        </NavLink>
-        <NavLink to="/app/credentials" onClick={closeNav}>
-          Credentials
-        </NavLink>
-        <NavLink to="/app/treasury" onClick={closeNav}>
-          Treasury
-        </NavLink>
-        <NavLink to="/app/governance" onClick={closeNav}>
-          Governance
-        </NavLink>
-        <NavLink to="/app/procurement" onClick={closeNav}>
-          Procurement
-        </NavLink>
-        <NavLink to="/app/auditor" onClick={closeNav}>
-          Auditor
-        </NavLink>
-        <NavLink to="/docs" onClick={closeNav}>
-          Docs
-        </NavLink>
-      </nav>
-      {busyAction !== "idle" && BUSY_COPY[busyAction] ? (
-        <Banner tone="info">{BUSY_COPY[busyAction]}</Banner>
-      ) : null}
-      {walletError ? <Banner tone="error">{walletError}</Banner> : null}
-      {ledgerError ? <Banner tone="error">{ledgerError}</Banner> : null}
-      <main id="main-content">
-        <Outlet />
-      </main>
+          {sidebarHidden ? (
+            <button
+              type="button"
+              className="btn ghost sidebar-show"
+              aria-expanded={false}
+              aria-controls="workspace-sidebar"
+              onClick={showSidebar}
+            >
+              Show sidebar
+            </button>
+          ) : null}
+          <div className="nav-tools">
+            {wallet ? (
+              <button type="button" className="btn ghost wallet-chip" onClick={disconnectWallet}>
+                {wallet.unshieldedAddress ? shortAddress(wallet.unshieldedAddress) : "Disconnect"}
+              </button>
+            ) : (
+              <button type="button" className="btn" onClick={() => void connectWallet()}>
+                {busyAction === "connect" ? "Connecting…" : walletReconnectNeeded ? "Reconnect wallet" : "Connect wallet"}
+              </button>
+            )}
+          </div>
+        </header>
+        {walletReconnectNeeded && !wallet ? (
+          <Banner tone="info">Wallet session ended. Reconnect the Midnight wallet to prove and submit. Connection is not claimed until the connector confirms it.</Banner>
+        ) : null}
+        {busyAction !== "idle" && BUSY_COPY[busyAction] ? (
+          <Banner tone="info">{BUSY_COPY[busyAction]}</Banner>
+        ) : null}
+        {walletError ? <Banner tone="error">{walletError}</Banner> : null}
+        {ledgerError ? <Banner tone="error">{ledgerError}</Banner> : null}
+        <main id="main-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

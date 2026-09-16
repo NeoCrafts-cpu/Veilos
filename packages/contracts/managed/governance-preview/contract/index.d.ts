@@ -3,11 +3,8 @@ import type * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
 export type Witnesses<PS> = {
   ownerSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   holderSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  revocationSecret(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   ballotChoice(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   ballotSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  tallyYes(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
-  tallyNo(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
 }
 
 export type ImpureCircuits<PS> = {
@@ -47,7 +44,7 @@ export type ProvableCircuits<PS> = {
 export type PureCircuits = {
   ownerCommitmentOf(sk_0: Uint8Array): Uint8Array;
   holderCommitmentOf(sk_0: Uint8Array): Uint8Array;
-  voterRevocationOf(holder_0: Uint8Array, secret_0: Uint8Array): Uint8Array;
+  voterRevocationOf(holder_0: Uint8Array): Uint8Array;
   ballotCommitmentOf(proposalId_0: Uint8Array,
                      holder_0: Uint8Array,
                      choice_0: bigint,
@@ -61,8 +58,7 @@ export type Circuits<PS> = {
   holderCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                      sk_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   voterRevocationOf(context: __compactRuntime.CircuitContext<PS>,
-                    holder_0: Uint8Array,
-                    secret_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+                    holder_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   ballotCommitmentOf(context: __compactRuntime.CircuitContext<PS>,
                      proposalId_0: Uint8Array,
                      holder_0: Uint8Array,

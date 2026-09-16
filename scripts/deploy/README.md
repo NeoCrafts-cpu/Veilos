@@ -92,7 +92,7 @@ The GitHub repo builds the static operator UI. `vercel.json` and `render.yaml` b
 
 Do not add `VELIOS_WALLET_SEED`, `VELIOS_WALLET_MNEMONIC`, or vault passwords to Vercel/Render env vars. Public Preview addresses already live in `@velios/midnight` `PREVIEW_DEPLOYMENT`.
 
-Circuit calls from the hosted origin still require a trusted local proof server (`http://127.0.0.1:6300`) or the wallet Proof Station.
+Circuit calls from the hosted origin use the wallet Proof Station when the DApp Connector exposes `getProvingProvider`. Otherwise they require a trusted local proof server (`http://127.0.0.1:6300`) on the same computer as the browser. Vercel does not host a proof server.
 
 ## What not to do
 

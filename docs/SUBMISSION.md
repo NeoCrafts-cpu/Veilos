@@ -5,7 +5,7 @@
 **Repo:** https://github.com/NeoCrafts-cpu/Veilos  
 **Topic:** `midnightntwrk`  
 **License:** Apache 2.0 (`LICENSE`, `NOTICE`)  
-**Live UI:** https://veilos-web.vercel.app  
+**Live UI:** https://veilos-web-ten.vercel.app
 **Pitch deck:** [docs/pitch/index.html](pitch/index.html)  
 **Demo script:** [DEMO-SCRIPT.md](DEMO-SCRIPT.md)  
 **Rubric map:** [RUBRIC.md](RUBRIC.md)  
@@ -35,5 +35,5 @@ Nothing — this is the first AKINDO submission. There is no earlier Wave upload
 1. Open the README “How judges evaluate” section.
 2. Confirm Compact sources under `packages/contracts/compact/`.
 3. Run `pnpm install && pnpm --filter @velios/contracts test && pnpm --filter @velios/web test`.
-4. Open https://veilos-web.vercel.app — landing, Preview org, Privacy Inspector (public reads, no wallet).
+4. Open https://veilos-web-ten.vercel.app — landing, Preview org, Privacy Inspector (public reads, no wallet).
 5. Optional live circuit: Node 22, Docker proof-server, Lace/1AM on Preview, `pnpm dev`.

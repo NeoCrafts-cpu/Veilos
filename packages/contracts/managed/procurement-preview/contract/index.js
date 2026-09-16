@@ -97,9 +97,6 @@ export class Contract {
     if (typeof(witnesses_0.holderSecret) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named holderSecret');
     }
-    if (typeof(witnesses_0.revocationSecret) !== 'function') {
-      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named revocationSecret');
-    }
     if (typeof(witnesses_0.bidSalt) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named bidSalt');
     }
@@ -108,6 +105,9 @@ export class Contract {
     }
     if (typeof(witnesses_0.awardSalt) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named awardSalt');
+    }
+    if (typeof(witnesses_0.winnerHolder) !== 'function') {
+      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named winnerHolder');
     }
     this.witnesses = witnesses_0;
     this.circuits = {
@@ -602,23 +602,6 @@ export class Contract {
     });
     return result_0;
   }
-  _revocationSecret_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
-    const [nextPrivateState_0, result_0] = this.witnesses.revocationSecret(witnessContext_0);
-    context.currentPrivateState = nextPrivateState_0;
-    if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
-      __compactRuntime.typeError('revocationSecret',
-                                 'return value',
-                                 'procurement-preview.compact line 35 char 1',
-                                 'Bytes<32>',
-                                 result_0)
-    }
-    partialProofData.privateTranscriptOutputs.push({
-      value: _descriptor_0.toValue(result_0),
-      alignment: _descriptor_0.alignment()
-    });
-    return result_0;
-  }
   _bidSalt_0(context, partialProofData) {
     const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.bidSalt(witnessContext_0);
@@ -670,10 +653,27 @@ export class Contract {
     });
     return result_0;
   }
+  _winnerHolder_0(context, partialProofData) {
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
+    const [nextPrivateState_0, result_0] = this.witnesses.winnerHolder(witnessContext_0);
+    context.currentPrivateState = nextPrivateState_0;
+    if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
+      __compactRuntime.typeError('winnerHolder',
+                                 'return value',
+                                 'procurement-preview.compact line 39 char 1',
+                                 'Bytes<32>',
+                                 result_0)
+    }
+    partialProofData.privateTranscriptOutputs.push({
+      value: _descriptor_0.toValue(result_0),
+      alignment: _descriptor_0.alignment()
+    });
+    return result_0;
+  }
   _encodeUint64_0(n_0) {
     return __compactRuntime.convertFieldToBytes(32,
                                                 n_0,
-                                                'procurement-preview.compact line 41 char 10');
+                                                'procurement-preview.compact line 42 char 10');
   }
   _ownerCommitmentOf_0(sk_0) {
     return this._persistentHash_0([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 111, 119, 110, 101, 114, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -683,10 +683,9 @@ export class Contract {
     return this._persistentHash_0([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 104, 111, 108, 100, 101, 114, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                    sk_0]);
   }
-  _bidderRevocationOf_0(holder_0, secret_0) {
-    return this._persistentHash_3([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 98, 105, 100, 114, 101, 118, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-                                   holder_0,
-                                   secret_0]);
+  _bidderRevocationOf_0(holder_0) {
+    return this._persistentHash_0([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 98, 105, 100, 114, 101, 118, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+                                   holder_0]);
   }
   _bidCommitmentOf_0(procurementId_0, holder_0, amount_0, salt_0) {
     return this._persistentHash_1([new Uint8Array([118, 101, 108, 105, 111, 115, 58, 98, 105, 100, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -1011,9 +1010,7 @@ export class Contract {
                                                                                        { popeq: { cached: true,
                                                                                                   result: undefined } }]).value),
                             'not a bidder');
-    const revoked_0 = this._bidderRevocationOf_0(holder_0,
-                                                 this._revocationSecret_0(context,
-                                                                          partialProofData));
+    const revoked_0 = this._bidderRevocationOf_0(holder_0);
     __compactRuntime.assert(!_descriptor_4.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                        partialProofData,
                                                                                        [
@@ -1120,6 +1117,45 @@ export class Contract {
                                                                              { popeq: { cached: false,
                                                                                         result: undefined } }]).value);
     __compactRuntime.assert(lot_0.status === 0, 'procurement closed');
+    const publicHolder_0 = this._winnerHolder_0(context, partialProofData);
+    const winnerKey_0 = this._bidKeyOf_0(publicId_0, publicHolder_0);
+    __compactRuntime.assert(_descriptor_4.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                      partialProofData,
+                                                                                      [
+                                                                                       { dup: { n: 0 } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_14.toValue(7n),
+                                                                                                                  alignment: _descriptor_14.alignment() } }] } },
+                                                                                       { push: { storage: false,
+                                                                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(winnerKey_0),
+                                                                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                                                                       'member',
+                                                                                       { popeq: { cached: true,
+                                                                                                  result: undefined } }]).value),
+                            'bid missing');
+    __compactRuntime.assert(this._equal_1(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                                    partialProofData,
+                                                                                                    [
+                                                                                                     { dup: { n: 0 } },
+                                                                                                     { idx: { cached: false,
+                                                                                                              pushPath: false,
+                                                                                                              path: [
+                                                                                                                     { tag: 'value',
+                                                                                                                       value: { value: _descriptor_14.toValue(7n),
+                                                                                                                                alignment: _descriptor_14.alignment() } }] } },
+                                                                                                     { idx: { cached: false,
+                                                                                                              pushPath: false,
+                                                                                                              path: [
+                                                                                                                     { tag: 'value',
+                                                                                                                       value: { value: _descriptor_0.toValue(winnerKey_0),
+                                                                                                                                alignment: _descriptor_0.alignment() } }] } },
+                                                                                                     { popeq: { cached: false,
+                                                                                                                result: undefined } }]).value),
+                                          publicWinner_0),
+                            'winner mismatch');
     const awardC_0 = this._awardCommitmentOf_0(publicId_0,
                                                publicWinner_0,
                                                this._awardSalt_0(context,
@@ -1151,6 +1187,10 @@ export class Contract {
     return [];
   }
   _equal_0(x0, y0) {
+    if (!x0.every((x, i) => y0[i] === x)) { return false; }
+    return true;
+  }
+  _equal_1(x0, y0) {
     if (!x0.every((x, i) => y0[i] === x)) { return false; }
     return true;
   }
@@ -1652,10 +1692,10 @@ const _emptyContext = {
 const _dummyContract = new Contract({
   ownerSecret: (...args) => undefined,
   holderSecret: (...args) => undefined,
-  revocationSecret: (...args) => undefined,
   bidSalt: (...args) => undefined,
   bidAmount: (...args) => undefined,
-  awardSalt: (...args) => undefined
+  awardSalt: (...args) => undefined,
+  winnerHolder: (...args) => undefined
 });
 export const pureCircuits = {
   ownerCommitmentOf: (...args_0) => {
@@ -1666,7 +1706,7 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('ownerCommitmentOf',
                                  'argument 1',
-                                 'procurement-preview.compact line 44 char 1',
+                                 'procurement-preview.compact line 45 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }
@@ -1680,33 +1720,25 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('holderCommitmentOf',
                                  'argument 1',
-                                 'procurement-preview.compact line 51 char 1',
+                                 'procurement-preview.compact line 52 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }
     return _dummyContract._holderCommitmentOf_0(sk_0);
   },
   bidderRevocationOf: (...args_0) => {
-    if (args_0.length !== 2) {
-      throw new __compactRuntime.CompactError(`bidderRevocationOf: expected 2 arguments (as invoked from Typescript), received ${args_0.length}`);
+    if (args_0.length !== 1) {
+      throw new __compactRuntime.CompactError(`bidderRevocationOf: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
     }
     const holder_0 = args_0[0];
-    const secret_0 = args_0[1];
     if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
       __compactRuntime.typeError('bidderRevocationOf',
                                  'argument 1',
-                                 'procurement-preview.compact line 58 char 1',
+                                 'procurement-preview.compact line 59 char 1',
                                  'Bytes<32>',
                                  holder_0)
     }
-    if (!(secret_0.buffer instanceof ArrayBuffer && secret_0.BYTES_PER_ELEMENT === 1 && secret_0.length === 32)) {
-      __compactRuntime.typeError('bidderRevocationOf',
-                                 'argument 2',
-                                 'procurement-preview.compact line 58 char 1',
-                                 'Bytes<32>',
-                                 secret_0)
-    }
-    return _dummyContract._bidderRevocationOf_0(holder_0, secret_0);
+    return _dummyContract._bidderRevocationOf_0(holder_0);
   },
   bidCommitmentOf: (...args_0) => {
     if (args_0.length !== 4) {

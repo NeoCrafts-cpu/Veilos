@@ -72,6 +72,7 @@ export ledger ballotCommitments: Map<Bytes<32>, Bytes<32>>;
 export ledger procurements: Map<Bytes<32>, ProcurementPublic>;
 export ledger bidCommitments: Map<Bytes<32>, Bytes<32>>;
 export ledger disclosures: Map<Bytes<32>, DisclosurePublic>;
+export ledger spendCommitment: Bytes<32>;
 
 witness ownerSecret(): Bytes<32>;
 witness holderSecret(): Bytes<32>;
@@ -97,6 +98,7 @@ witness tallyNo(): Uint<64>;
 witness bidSalt(): Bytes<32>;
 witness bidAmount(): Uint<64>;
 witness awardSalt(): Bytes<32>;
+witness winnerHolder(): Bytes<32>;
 
 circuit encodeUint64(n: Uint<64>): Bytes<32> {
   return n as Field as Bytes<32>;
@@ -121,23 +123,49 @@ export circuit credentialCommitmentOf(
   org: Bytes<32>,
   classId: Uint<64>,
   expiry: Uint<64>,
-  salt: Bytes<32>
+  salt: Bytes<32>,
+  vendor: Bytes<32>,
+  perAction: Uint<64>,
+  daily: Uint<64>
 ): Bytes<32> {
-  return persistentHash<Vector<6, Bytes<32>>>([
+  return persistentHash<Vector<9, Bytes<32>>>([
     pad(32, "velios:cred:"),
     holder,
     org,
     encodeUint64(classId),
     encodeUint64(expiry),
+    salt,
+    vendor,
+    encodeUint64(perAction),
+    encodeUint64(daily)
+  ]);
+}
+
+export circuit revocationNullifierOf(commitment: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "velios:credrev:"),
+    commitment
+  ]);
+}
+
+export circuit spendCommitmentOf(
+  periodStart: Uint<64>,
+  dailySpend: Uint<64>,
+  salt: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "velios:spend:"),
+    encodeUint64(periodStart),
+    encodeUint64(dailySpend),
     salt
   ]);
 }
 
-export circuit revocationNullifierOf(commitment: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+export circuit bidKeyOf(procurementId: Bytes<32>, holder: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<3, Bytes<32>>>([
-    pad(32, "velios:credrev:"),
-    commitment,
-    secret
+    pad(32, "velios:bidkey:"),
+    procurementId,
+    holder
   ]);
 }
 
@@ -250,18 +278,38 @@ circuit currentCredentialCommitment(): Bytes<32> {
     organizationId,
     credentialClass(),
     credentialExpiry(),
-    credentialSalt()
+    credentialSalt(),
+    vendorId(),
+    perActionLimit(),
+    dailyLimit()
   );
 }
 
 circuit assertCredential(classId: Uint<64>, periodEnd: Uint<64>): [] {
   const commitment = currentCredentialCommitment();
   const path = credentialPath();
+  assert(path.leaf == commitment, "credential path");
   assert(credentialTree.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "credential path");
   assert(credentialClass() == classId, "credential class");
   assert(credentialExpiry() >= periodEnd, "credential expired");
-  const nullifier = revocationNullifierOf(commitment, revocationSecret());
+  const nullifier = revocationNullifierOf(commitment);
   assert(!revokedNullifiers.member(disclose(nullifier)), "credential revoked");
+}
+
+circuit assertSpendBinding(publicPeriodStart: Uint<64>): [] {
+  const empty = default<Bytes<32>>;
+  const current = spendCommitmentOf(spendPeriodStart(), spendDaily(), spendSalt());
+  assert(spendCommitment == empty || spendCommitment == current, "spend predicate failed");
+  const committedStart = disclose(spendPeriodStart());
+  assert(!(spendCommitment == empty) || committedStart == 0, "spend predicate failed");
+  assert(!(spendCommitment == empty) || spendDaily() == 0, "spend predicate failed");
+  assert(committedStart <= publicPeriodStart, "stale period");
+  assert(
+    committedStart == publicPeriodStart ||
+    committedStart == 0 ||
+    kernel.blockTimeGreaterThan((committedStart + 86400) as Uint<64>),
+    "period not elapsed"
+  );
 }
 
 constructor(orgId: Bytes<32>) {
@@ -301,10 +349,12 @@ export circuit authorizePayment(
   assertCredential(1, publicPeriodEnd);
   assert(vendor == vendorId(), "policy predicate failed");
   assert(amount <= perActionLimit(), "policy predicate failed");
-  assert(spendPeriodStart() <= publicPeriodStart, "stale period");
+  assertSpendBinding(publicPeriodStart);
   const carried = spendPeriodStart() == publicPeriodStart ? spendDaily() : 0;
   const nextSpend = carried + amount;
+  assert(nextSpend >= carried, "policy predicate failed");
   assert(nextSpend <= dailyLimit(), "policy predicate failed");
+  const nextSpend64 = nextSpend as Uint<64>;
   assert(!usedActionIds.member(publicActionId), "replay");
   usedActionIds.insert(publicActionId);
   const intentC = intentCommitmentOf(
@@ -327,6 +377,7 @@ export circuit authorizePayment(
     periodEnd: publicPeriodEnd
   });
   actionCount.increment(1);
+  spendCommitment = disclose(spendCommitmentOf(publicPeriodStart, nextSpend64, nextSpendSalt()));
 }
 
 export circuit depositNight(amount: Uint<128>): [] {
@@ -419,16 +470,14 @@ export circuit finalizeProposal(proposalId: Bytes<32>): [] {
   const proposal = proposals.lookup(publicId);
   assert(proposal.status == ProposalStatus.open, "proposal closed");
   assert(kernel.blockTimeGreaterThan(proposal.voteEnd), "vote still open");
-  const yes = tallyYes();
-  const no = tallyNo();
   proposals.insert(publicId, ProposalPublic {
     actionCommitment: proposal.actionCommitment,
     voteStart: proposal.voteStart,
     voteEnd: proposal.voteEnd,
     quorumCommitment: proposal.quorumCommitment,
     status: ProposalStatus.finalized,
-    yesCount: disclose(yes),
-    noCount: disclose(no)
+    yesCount: 0,
+    noCount: 0
   });
 }
 
@@ -461,11 +510,7 @@ export circuit submitBid(procurementId: Bytes<32>): [] {
   assertCredential(2, lot.windowEnd);
   const holder = holderCommitmentOf(holderSecret());
   const bidC = bidCommitmentOf(publicId, holder, bidAmount(), bidSalt());
-  const bidKey = persistentHash<Vector<3, Bytes<32>>>([
-    pad(32, "velios:bidkey:"),
-    publicId,
-    holder
-  ]);
+  const bidKey = bidKeyOf(publicId, holder);
   assert(!bidCommitments.member(disclose(bidKey)), "duplicate bid");
   bidCommitments.insert(disclose(bidKey), disclose(bidC));
 }
@@ -474,19 +519,24 @@ export circuit awardProcurement(procurementId: Bytes<32>, winnerBid: Bytes<32>, 
   assertAdmin();
   const publicId = disclose(procurementId);
   const publicActionId = disclose(actionId);
+  const publicWinner = disclose(winnerBid);
   assert(procurements.member(publicId), "procurement missing");
   assert(authorizations.member(publicActionId), "authorization missing");
   assert(!settlementNullifiers.member(disclose(settlementNullifierOf(publicActionId))), "already settled");
   const lot = procurements.lookup(publicId);
   assert(lot.status == ProcurementStatus.open, "procurement closed");
-  const awardC = awardCommitmentOf(publicId, winnerBid, awardSalt());
+  const publicHolder = disclose(winnerHolder());
+  const winnerKey = bidKeyOf(publicId, publicHolder);
+  assert(bidCommitments.member(winnerKey), "bid missing");
+  assert(bidCommitments.lookup(winnerKey) == publicWinner, "winner mismatch");
+  const awardC = awardCommitmentOf(publicId, publicWinner, awardSalt());
   procurements.insert(publicId, ProcurementPublic {
     windowStart: lot.windowStart,
     windowEnd: lot.windowEnd,
     eligibility: lot.eligibility,
     status: ProcurementStatus.awarded,
     awardCommitment: disclose(awardC),
-    winnerBidCommitment: disclose(winnerBid)
+    winnerBidCommitment: publicWinner
   });
 }
 
